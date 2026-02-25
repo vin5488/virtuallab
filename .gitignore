@@ -1,0 +1,32 @@
+# Node.js
+node_modules/
+dist/
+.npm
+*.log
+
+# Docker
+.docker/
+
+# Temp / OS
+.DS_Store
+Thumbs.db
+tmp/
+temp_prog_*
+
+# Artifacts & Backups
+*.zip
+*.bat
+*.ps1
+*.js.backup
+mbd_restore_*.js
+update_mbd_context_*.ps1
+fix_syntax.ps1
+fix_mbd_placement.ps1
+insert_mbd_adv.ps1
+restore_fund.ps1
+final_merge.ps1
+restore_projects_block.ps1
+check_counts.ps1
+check_syntax.js
+jscpp_test.html
+new-env.html
