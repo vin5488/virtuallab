@@ -1773,6 +1773,23 @@
                     }
                 },
 
+                async runLocalCompile(source_code, stdin) {
+                    try {
+                        const response = await fetch('/compile', {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                source_code: source_code,
+                                stdin: stdin || "",
+                                filename: this.activeFiles[this.activeFileIdx] ? this.activeFiles[this.activeFileIdx].name : 'main.c'
+                            })
+                        });
+                        return await response.json();
+                    } catch (e) {
+                        return { error: true, compile_output: 'Failed to connect to integrated toolchain.' };
+                    }
+                },
+
                 downloadLogs() {
                     if (!this.buildReport) return;
 
