@@ -1123,7 +1123,7 @@
     <script>
         function labApp() {
             return {
-                isLoggedIn: true, // Skip login screen - direct access
+                isLoggedIn: false, // Enforce login screen
                 authStep: 'role',
                 currentView: 'dashboard',
                 wsTab: 'editor', // Start directly on code editor
@@ -1321,26 +1321,27 @@
                 },
 
                 generateCode() {
-                    if (!this.user.name || !this.user.email) return alert("Required fields missing.");
-                    this.generatedCode = 'SL-' + Math.random().toString(36).substring(7).toUpperCase();
+                    if (!this.user.name || !this.user.email) return;
+                    this.generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
                     this.authStep = 'code';
                 },
 
                 verifyAndLogin() {
-                    if (this.enteredCode.toUpperCase() === this.generatedCode) {
-                        this.isLoggedIn = true;
+                    if (this.enteredCode === this.generatedCode) {
+                        this.user.role = 'candidate';
                         this.currentView = 'dashboard';
+                        this.isLoggedIn = true;
                     } else {
-                        alert("Invalid Code.");
+                        alert('Invalid Access Code');
                     }
                 },
 
                 verifyAdmin() {
-                    if (this.adminCreds.id === 'admin' && this.adminCreds.pass === 'skilllync_admin') {
+                    if (this.adminCreds.id === 'admin' && this.adminCreds.pass === 'admin123') {
                         this.user.name = 'Administrator';
-                        this.user.email = 'admin@skilllync.com';
+                        this.user.role = 'admin';
+                        this.currentView = 'admin_dashboard';
                         this.isLoggedIn = true;
-                        this.currentView = 'admin';
                     } else {
                         alert("Invalid Admin Credentials.");
                     }
