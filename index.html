@@ -7,6 +7,7 @@
     <title>SkillLyncVirtualLab - Professional Embedded Simulation</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/@wokwi/elements@0.48.3/dist/wokwi-elements.bundle.js"></script>
     <!-- No external compiler script needed for Judge0 API -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -242,6 +243,10 @@
                                 :class="currentView === 'workspace' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-500'"
                                 class="px-2 py-4 text-xs font-bold uppercase tracking-widest transition-all">Project
                                 Workspace</button>
+                            <button @click="currentView = 'my_submissions'; loadMySubmissions()"
+                                :class="currentView === 'my_submissions' ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-slate-500'"
+                                class="px-2 py-4 text-xs font-bold uppercase tracking-widest transition-all">My
+                                Submissions</button>
                         </div>
                         <div
                             class="hidden lg:flex items-center gap-4 bg-slate-950/50 px-4 py-1.5 rounded-full border border-slate-800">
@@ -265,6 +270,9 @@
                             :class="currentView === 'admin' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-500'"
                             class="px-2 py-4 text-xs font-bold uppercase tracking-widest transition-all">Analytics
                             Hub</button>
+                        <button @click="currentView = 'admin_submissions'; loadAllSubmissions()"
+                            :class="currentView === 'admin_submissions' ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-slate-500'"
+                            class="px-2 py-4 text-xs font-bold uppercase tracking-widest transition-all">Submissions</button>
                     </div>
                 </template>
             </nav>
@@ -495,6 +503,11 @@
                                 <i class="fas" :class="isBuilding ? 'fa-circle-notch fa-spin' : 'fa-play'"></i>
                                 <span x-text="isBuilding ? 'Building...' : 'Compile & Run Tests'"></span>
                             </button>
+                            <button x-show="buildReport && buildReport.success && testResults.length > 0"
+                                @click="showSubmitModal = true"
+                                class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center gap-2 shadow-lg shadow-emerald-900/20">
+                                <i class="fas fa-paper-plane"></i> Submit Assignment
+                            </button>
                         </div>
                     </div>
 
@@ -694,149 +707,12 @@
                                                     Running...
                                                 </h4>
 
-                                                <div class="relative w-64 h-auto">
-                                                    <!-- Detailed SVG representation of Raspberry Pi Pico -->
-                                                    <svg viewBox="-30 -20 260 540" xmlns="http://www.w3.org/2000/svg"
-                                                        class="drop-shadow-2xl filter block mx-auto">
-                                                        <defs>
-                                                            <!-- Real board dimensions roughly 21mm x 51mm, scaled up -> 210x510 -->
-                                                            <rect id="board" width="210" height="510" rx="15" x="0"
-                                                                y="0" fill="#2E7D32" stroke="#1B5E20"
-                                                                stroke-width="2" />
-
-                                                            <!-- Detailed Pin Pad (with hole) -->
-                                                            <g id="pin-pad">
-                                                                <rect x="-6" y="-3" width="12" height="6" rx="3"
-                                                                    fill="#FFE082" />
-                                                                <circle cx="0" cy="0" r="1.5" fill="#212121" />
-                                                            </g>
-                                                        </defs>
-
-                                                        <!-- PCB Base -->
-                                                        <use href="#board" />
-
-                                                        <!-- Micro USB Port -->
-                                                        <rect x="75" y="-5" width="60" height="35" fill="#CFD8DC" rx="3"
-                                                            stroke="#90A4AE" stroke-width="1.5" />
-                                                        <rect x="85" y="-5" width="40" height="15" fill="#37474F" />
-                                                        <rect x="95" y="10" width="20" height="10" fill="#90A4AE" />
-
-                                                        <!-- Core Components -->
-                                                        <!-- RP2040 Chip -->
-                                                        <rect x="65" y="220" width="80" height="80" rx="3"
-                                                            fill="#212121" stroke="#424242" stroke-width="2" />
-                                                        <circle cx="75" cy="230" r="3" fill="#757575" />
-                                                        <!-- Pin 1 indicator -->
-                                                        <text x="105" y="255" font-family="'Courier New', monospace"
-                                                            font-size="12" font-weight="bold" fill="#BDBDBD"
-                                                            text-anchor="middle">RP2040</text>
-                                                        <text x="105" y="270" font-family="'Courier New', monospace"
-                                                            font-size="8" fill="#757575" text-anchor="middle">RPI</text>
-
-                                                        <!-- Flash Memory (W25Q16JVUXIQ) -->
-                                                        <rect x="80" y="330" width="50" height="40" rx="2"
-                                                            fill="#212121" stroke="#424242" stroke-width="1.5" />
-                                                        <circle cx="85" cy="335" r="2" fill="#757575" />
-
-                                                        <!-- Oscillator (12MHz) -->
-                                                        <rect x="85" y="160" width="40" height="20" rx="2"
-                                                            fill="#CFD8DC" stroke="#90A4AE" />
-                                                        <text x="105" y="173" font-family="'Courier New', monospace"
-                                                            font-size="8" fill="#455A64"
-                                                            text-anchor="middle">12.0</text>
-
-                                                        <!-- BOOTSEL Button -->
-                                                        <rect x="145" y="100" width="25" height="20" rx="2"
-                                                            fill="#EEEEEE" stroke="#BDBDBD" />
-                                                        <rect x="150" y="105" width="15" height="10" rx="4"
-                                                            fill="#212121" />
-                                                        <text x="157" y="132" font-family="sans-serif" font-size="8"
-                                                            font-weight="bold" fill="#FFFFFF"
-                                                            text-anchor="middle">BOOT</text>
-
-                                                        <!-- Voltage Regulator (RT6150) -->
-                                                        <rect x="40" y="100" width="25" height="30" rx="1"
-                                                            fill="#212121" />
-                                                        <rect x="45" y="95" width="15" height="5" fill="#BDBDBD" />
-                                                        <!-- Tab -->
-
-                                                        <!-- Inductor (for power supply) -->
-                                                        <rect x="40" y="140" width="30" height="30" rx="2"
-                                                            fill="#424242" />
-
-                                                        <!-- Left Pin Header (GP0 to GP15) -->
-                                                        <g transform="translate(10, 30)">
-                                                            <!-- GP0 down to GP15 mapped linearly -->
-                                                            <template x-for="i in 20">
-                                                                <use href="#pin-pad" :y="(i-1) * 23.5" />
-                                                            </template>
-                                                        </g>
-
-                                                        <!-- Right Pin Header (VBUS, VSYS, GND, 3V3, ADC, GP28-GP16) -->
-                                                        <g transform="translate(200, 30)">
-                                                            <template x-for="i in 20">
-                                                                <use href="#pin-pad" :y="(i-1) * 23.5" />
-                                                            </template>
-                                                        </g>
-
-                                                        <!-- Labels for Key Left Pins -->
-                                                        <g font-family="'SF Mono', Consolas, monospace" font-size="10"
-                                                            font-weight="bold" fill="#B2DFDB">
-                                                            <text x="25" y="33">GP0</text>
-                                                            <text x="25" y="56">GP1</text>
-                                                            <text x="25" y="80">GND</text>
-                                                            <text x="25" y="103">GP2</text>
-                                                            <text x="25" y="127">GP3</text>
-                                                            <text x="25" y="150">GP4</text>
-                                                            <text x="25" y="174">GP5</text>
-                                                            <text x="25" y="197">GND</text>
-                                                            <text x="25" y="221">GP6</text>
-                                                            <text x="25" y="244">GP7</text>
-                                                            <text x="25" y="268">GP8</text>
-                                                            <text x="25" y="291">GP9</text>
-                                                            <text x="25" y="315">GND</text>
-                                                            <text x="25" y="338">GP10</text>
-                                                            <text x="25" y="362">GP11</text>
-                                                            <text x="25" y="385">GP12</text>
-                                                            <text x="25" y="409">GP13</text>
-                                                            <text x="25" y="432">GND</text>
-                                                            <text x="25" y="456">GP14</text>
-                                                            <text x="25" y="479">GP15</text>
-                                                        </g>
-
-                                                        <!-- Labels for Key Right Pins -->
-                                                        <g font-family="'SF Mono', Consolas, monospace" font-size="10"
-                                                            font-weight="bold" fill="#B2DFDB" text-anchor="end">
-                                                            <text x="185" y="33">VBUS</text>
-                                                            <text x="185" y="56">VSYS</text>
-                                                            <text x="185" y="80">GND</text>
-                                                            <text x="185" y="103">3V3_EN</text>
-                                                            <text x="185" y="127">3V3_OUT</text>
-                                                            <text x="185" y="150">ADC_VREF</text>
-                                                            <text x="185" y="174">GP28/A2</text>
-                                                            <text x="185" y="197">GND</text>
-                                                            <text x="185" y="221">GP27/A1</text>
-                                                            <text x="185" y="244">GP26/A0</text>
-                                                            <text x="185" y="268">RUN</text>
-                                                            <text x="185" y="291">GP22</text>
-                                                            <text x="185" y="315">GND</text>
-                                                            <text x="185" y="338">GP21</text>
-                                                            <text x="185" y="362">GP20</text>
-                                                            <text x="185" y="385">GP19</text>
-                                                            <text x="185" y="409">GP18</text>
-                                                            <text x="185" y="432">GND</text>
-                                                            <text x="185" y="456">GP17</text>
-                                                            <text x="185" y="479">GP16</text>
-                                                        </g>
-
-                                                    </svg>
-
-                                                    <!-- Dynamic Onboard LED (GP25 is physically near the micro-USB on the top left/center) -->
-                                                    <!-- Specifically, Pico LED is above left of the BOOTSEL button -->
-                                                    <div class="absolute w-5 h-5 rounded-full transition-all duration-75"
-                                                        style="top: 15%; left: 30%; margin-top: -10px"
-                                                        :class="rp2040LEDOn ? 'bg-green-400 shadow-[0_0_25px_15px_rgba(74,222,128,0.8)] scale-110' : 'bg-[#1a381e] border-2 border-[#122b15] scale-100'">
-                                                    </div>
+                                                <div class="relative w-auto h-auto flex justify-center py-4">
+                                                    <!-- Official Wokwi Web Component for Raspberry Pi Pico -->
+                                                    <wokwi-pi-pico class="drop-shadow-2xl"
+                                                        style="max-width: 250px; height: auto;"
+                                                        :led="rp2040LEDOn ? 'true' : 'false'">
+                                                    </wokwi-pi-pico>
                                                 </div>
                                             </div>
                                         </template>
@@ -1048,7 +924,380 @@
             </div> <!-- closes workspace h-full flex -->
         </div>
 
-        <!-- Admin Hub -->
+        <!-- My Submissions View (Candidate) -->
+        <div x-show="currentView === 'my_submissions'" class="h-full overflow-y-auto p-10 bg-slate-950">
+            <div class="max-w-5xl mx-auto">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-black text-white tracking-tighter">My <span
+                            class="text-emerald-500">Submissions</span></h2>
+                    <p class="text-sm text-slate-500 mt-1">Track your assignment submissions and grades.</p>
+                </div>
+
+                <div x-show="mySubmissions.length === 0" class="text-center py-20 text-slate-600">
+                    <i class="fas fa-inbox text-5xl mb-4"></i>
+                    <p class="text-lg font-bold">No submissions yet</p>
+                    <p class="text-xs text-slate-700 mt-2">Complete assignments and submit them from the workspace.</p>
+                </div>
+
+                <div x-show="mySubmissions.length > 0"
+                    class="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-800/50">
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Day</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Project</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Tests
+                                </th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Auto
+                                </th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">
+                                    Trainer</th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Final
+                                </th>
+                                <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Status
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="sub in mySubmissions" :key="sub.id">
+                        <tbody class="border-t border-slate-800/50">
+                            <tr class="hover:bg-slate-800/30 transition-colors cursor-pointer"
+                                @click="sub._expanded = !sub._expanded">
+                                <td class="px-6 py-4 text-sm font-bold text-blue-400" x-text="'Day ' + sub.day"></td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-bold text-white" x-text="sub.projectTitle"></div>
+                                    <div class="text-[10px] text-slate-500" x-text="sub.projectId"></div>
+                                </td>
+                                <td class="px-6 py-4 text-center text-sm font-bold text-slate-300"
+                                    x-text="sub.testsPassed + '/' + sub.testsTotal"></td>
+                                <td class="px-6 py-4 text-center text-sm font-bold text-blue-400"
+                                    x-text="sub.autoScore + '%'"></td>
+                                <td class="px-6 py-4 text-center text-sm font-bold"
+                                    :class="sub.grade ? 'text-emerald-400' : 'text-slate-600'"
+                                    x-text="sub.grade ? sub.grade.manualScore + '%' : '—'"></td>
+                                <td class="px-6 py-4 text-center text-lg font-black"
+                                    :class="sub.grade ? 'text-white' : 'text-slate-600'"
+                                    x-text="sub.grade ? sub.grade.compositeScore + '%' : '—'"></td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="text-[10px] font-black uppercase px-3 py-1 rounded-full"
+                                        :class="sub.status === 'graded' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'"
+                                        x-text="sub.status"></span>
+                                </td>
+                            </tr>
+                            <tr x-show="sub._expanded && sub.grade" x-transition class="bg-slate-950/50">
+                                <td colspan="7" class="px-10 py-6">
+                                    <div class="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <h5
+                                                class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
+                                                Rubric Scores</h5>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <template x-for="[k,v] of Object.entries(sub.grade.scores || {})"
+                                                    :key="k">
+                                                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+                                                        <div class="text-[10px] text-slate-500 uppercase"
+                                                            x-text="k.replace(/([A-Z])/g, ' $1').trim()"></div>
+                                                        <div class="text-lg font-black text-blue-400"
+                                                            x-text="v + '/10'"></div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h5
+                                                class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
+                                                Trainer Feedback</h5>
+                                            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                                                <p class="text-xs text-slate-300 italic leading-relaxed"
+                                                    x-text="sub.grade.comments || 'No comments provided.'"></p>
+                                                <div class="mt-3 text-[10px] text-slate-600">Graded by: <span
+                                                        class="text-slate-400" x-text="sub.grade.trainerName"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Submissions Hub -->
+        <div x-show="currentView === 'admin_submissions'" class="h-full overflow-y-auto p-10 bg-slate-950">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-black text-white tracking-tighter">Assignment <span
+                                class="text-emerald-500">Submissions</span></h2>
+                        <p class="text-xs text-slate-500 mt-1">Review and grade candidate submissions.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <select x-model="adminDayFilter" @change="loadAllSubmissions()"
+                            class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Days</option>
+                            <option value="1">Day 1</option>
+                            <option value="2">Day 2</option>
+                            <option value="3">Day 3</option>
+                            <option value="4">Day 4</option>
+                            <option value="5">Day 5</option>
+                        </select>
+                        <select x-model="adminSubFilter" @change="loadAllSubmissions()"
+                            class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="graded">Graded</option>
+                        </select>
+                        <button @click="loadAllSubmissions()"
+                            class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs border border-slate-700 transition-all">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="allSubmissions.length === 0 && !gradingSubmission"
+                    class="text-center py-20 text-slate-600">
+                    <i class="fas fa-clipboard-list text-5xl mb-4"></i>
+                    <p class="text-lg font-bold">No submissions found</p>
+                    <p class="text-xs text-slate-700 mt-2">Candidates haven't submitted any assignments yet.</p>
+                </div>
+
+                <!-- Submissions Table -->
+                <div x-show="allSubmissions.length > 0 && !gradingSubmission"
+                    class="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-800/50">
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase">Candidate</th>
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase">Project</th>
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Day
+                                </th>
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Tests
+                                </th>
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Auto %
+                                </th>
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Final
+                                </th>
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Status
+                                </th>
+                                <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-right">Action
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="sub in allSubmissions" :key="sub.id">
+                                <tr class="border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                                    <td class="px-5 py-4">
+                                        <div class="text-sm font-bold text-white" x-text="sub.candidateName"></div>
+                                        <div class="text-[10px] text-slate-500" x-text="sub.email"></div>
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <div class="text-xs font-bold text-slate-300" x-text="sub.projectTitle"></div>
+                                        <div class="text-[10px] text-slate-500" x-text="sub.topicName"></div>
+                                    </td>
+                                    <td class="px-5 py-4 text-center text-sm font-bold text-blue-400" x-text="sub.day">
+                                    </td>
+                                    <td class="px-5 py-4 text-center text-sm text-slate-300"
+                                        x-text="sub.testsPassed + '/' + sub.testsTotal"></td>
+                                    <td class="px-5 py-4 text-center text-sm font-bold text-blue-400"
+                                        x-text="sub.autoScore + '%'"></td>
+                                    <td class="px-5 py-4 text-center text-sm font-black"
+                                        :class="sub.grade ? 'text-emerald-400' : 'text-slate-600'"
+                                        x-text="sub.grade ? sub.grade.compositeScore + '%' : '—'"></td>
+                                    <td class="px-5 py-4 text-center">
+                                        <span class="text-[10px] font-black uppercase px-3 py-1 rounded-full"
+                                            :class="sub.status === 'graded' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'"
+                                            x-text="sub.status"></span>
+                                    </td>
+                                    <td class="px-5 py-4 text-right">
+                                        <button @click="openGrading(sub)"
+                                            class="text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-lg border transition-all"
+                                            :class="sub.status === 'graded' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'">
+                                            <i class="fas" :class="sub.status === 'graded' ? 'fa-eye' : 'fa-pen'"></i>
+                                            <span x-text="sub.status === 'graded' ? 'Review' : 'Grade'"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Grading Panel -->
+                <div x-show="gradingSubmission" class="space-y-6">
+                    <button @click="gradingSubmission = null; gradingDetail = null"
+                        class="text-slate-500 hover:text-white mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                        <i class="fas fa-arrow-left"></i> Back to Submissions
+                    </button>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Left: Candidate Info + Code -->
+                        <div class="space-y-4">
+                            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <div class="text-lg font-bold text-white"
+                                            x-text="gradingSubmission.candidateName"></div>
+                                        <div class="text-[10px] text-slate-500" x-text="gradingSubmission.email"></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-[10px] font-bold text-blue-400 uppercase">Day <span
+                                                x-text="gradingSubmission.day"></span></div>
+                                        <div class="text-xs text-slate-400" x-text="gradingSubmission.projectTitle">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="bg-slate-800 px-4 py-2 rounded-xl text-center">
+                                        <div class="text-[9px] text-slate-500 uppercase font-bold">Tests</div>
+                                        <div class="text-sm font-black text-slate-200"
+                                            x-text="gradingSubmission.testsPassed + '/' + gradingSubmission.testsTotal">
+                                        </div>
+                                    </div>
+                                    <div class="bg-slate-800 px-4 py-2 rounded-xl text-center">
+                                        <div class="text-[9px] text-slate-500 uppercase font-bold">Auto Score</div>
+                                        <div class="text-sm font-black text-blue-400"
+                                            x-text="gradingSubmission.autoScore + '%'"></div>
+                                    </div>
+                                    <div class="bg-slate-800 px-4 py-2 rounded-xl text-center">
+                                        <div class="text-[9px] text-slate-500 uppercase font-bold">Submitted</div>
+                                        <div class="text-sm font-bold text-slate-300"
+                                            x-text="new Date(gradingSubmission.submittedAt).toLocaleDateString()"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Code Viewer -->
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+                                <div
+                                    class="px-4 py-2 bg-slate-800/50 text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fas fa-code text-blue-400"></i> Submitted Code
+                                </div>
+                                <template x-if="gradingDetail">
+                                    <div>
+                                        <template x-for="file in gradingDetail.code" :key="file.name">
+                                            <div class="border-t border-slate-800">
+                                                <div
+                                                    class="px-4 py-1.5 bg-slate-950/50 text-[10px] font-bold text-blue-400 flex items-center gap-2">
+                                                    <i class="fas fa-file-code"></i> <span x-text="file.name"></span>
+                                                </div>
+                                                <pre class="p-4 text-xs code-font text-slate-300 overflow-x-auto max-h-96 overflow-y-auto custom-scrollbar bg-slate-950"
+                                                    x-text="file.content"></pre>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <div x-show="!gradingDetail" class="p-8 text-center text-slate-600 text-xs">
+                                    <i class="fas fa-spinner fa-spin text-lg mb-2"></i><br>Loading code...
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Grading Rubric -->
+                        <div class="space-y-4">
+                            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                                <h4
+                                    class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <i class="fas fa-clipboard-check"></i> Grading Rubric
+                                </h4>
+
+                                <div class="space-y-5">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <label class="text-xs font-bold text-slate-300">Correctness</label>
+                                            <span class="text-sm font-black text-blue-400"
+                                                x-text="gradeScores.correctness + '/10'"></span>
+                                        </div>
+                                        <input type="range" min="0" max="10" step="1"
+                                            x-model.number="gradeScores.correctness" class="w-full accent-blue-500">
+                                        <p class="text-[10px] text-slate-600 mt-1">Does the code produce the right
+                                            output?</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <label class="text-xs font-bold text-slate-300">Code Quality</label>
+                                            <span class="text-sm font-black text-blue-400"
+                                                x-text="gradeScores.codeQuality + '/10'"></span>
+                                        </div>
+                                        <input type="range" min="0" max="10" step="1"
+                                            x-model.number="gradeScores.codeQuality" class="w-full accent-blue-500">
+                                        <p class="text-[10px] text-slate-600 mt-1">Naming, structure, readability.</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <label class="text-xs font-bold text-slate-300">Logic & Approach</label>
+                                            <span class="text-sm font-black text-blue-400"
+                                                x-text="gradeScores.logic + '/10'"></span>
+                                        </div>
+                                        <input type="range" min="0" max="10" step="1" x-model.number="gradeScores.logic"
+                                            class="w-full accent-blue-500">
+                                        <p class="text-[10px] text-slate-600 mt-1">Algorithm efficiency, approach
+                                            quality.</p>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <label class="text-xs font-bold text-slate-300">Style & Best
+                                                Practices</label>
+                                            <span class="text-sm font-black text-blue-400"
+                                                x-text="gradeScores.style + '/10'"></span>
+                                        </div>
+                                        <input type="range" min="0" max="10" step="1" x-model.number="gradeScores.style"
+                                            class="w-full accent-blue-500">
+                                        <p class="text-[10px] text-slate-600 mt-1">Formatting, comments, best practices.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Score Preview -->
+                                <div class="mt-6 bg-slate-950 rounded-xl p-4 border border-slate-800">
+                                    <div class="grid grid-cols-3 gap-4 text-center">
+                                        <div>
+                                            <div class="text-[9px] text-slate-600 uppercase font-bold">Auto (20%)</div>
+                                            <div class="text-lg font-black text-blue-400"
+                                                x-text="gradingSubmission ? gradingSubmission.autoScore : 0"></div>
+                                        </div>
+                                        <div>
+                                            <div class="text-[9px] text-slate-600 uppercase font-bold">Manual (80%)
+                                            </div>
+                                            <div class="text-lg font-black text-emerald-400"
+                                                x-text="Math.round(((gradeScores.correctness + gradeScores.codeQuality + gradeScores.logic + gradeScores.style) / 4) * 10)">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-[9px] text-slate-600 uppercase font-bold">Composite</div>
+                                            <div class="text-lg font-black text-white"
+                                                x-text="Math.round((gradingSubmission ? gradingSubmission.autoScore : 0) * 0.2 + ((gradeScores.correctness + gradeScores.codeQuality + gradeScores.logic + gradeScores.style) / 4) * 10 * 0.8) + '%'">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                                <h4
+                                    class="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <i class="fas fa-comment-alt"></i> Trainer Comments
+                                </h4>
+                                <textarea x-model="gradeComments" rows="4"
+                                    placeholder="Write feedback for the candidate..."
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 resize-none code-font"></textarea>
+                            </div>
+
+                            <button @click="submitGrade()" :disabled="isGrading"
+                                class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-4 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2">
+                                <i class="fas" :class="isGrading ? 'fa-circle-notch fa-spin' : 'fa-check-circle'"></i>
+                                <span x-text="isGrading ? 'Submitting Grade...' : 'Submit Grade'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Hub (existing) -->
         <div x-show="currentView === 'admin'" class="h-full overflow-y-auto p-10 bg-slate-950">
             <div class="max-w-6xl mx-auto">
                 <div class="flex justify-between items-end mb-10">
@@ -1146,6 +1395,63 @@
             </div>
         </div>
     </div>
+    </div>
+
+    <!-- Submit Assignment Modal -->
+    <div x-show="showSubmitModal"
+        class="fixed inset-0 z-[120] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8" x-transition
+        x-cloak>
+        <div class="bg-slate-900 border border-slate-800 max-w-md w-full p-8 rounded-3xl shadow-2xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-paper-plane text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Submit Assignment</h3>
+                    <p class="text-[10px] text-slate-500">Your code and test results will be sent for trainer review.
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <div class="text-[10px] font-bold text-slate-600 uppercase mb-1">Project</div>
+                    <div class="text-sm font-bold text-white" x-text="activeProject.title"></div>
+                    <div class="text-[10px] text-slate-500" x-text="activeProject.id + ' • ' + selectedTopic.name">
+                    </div>
+                </div>
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <div class="text-[10px] font-bold text-slate-600 uppercase mb-1">Test Results</div>
+                    <div class="text-sm font-bold"
+                        :class="testResults.every(r=>r.passed) ? 'text-emerald-400' : 'text-amber-400'"
+                        x-text="testResults.filter(r=>r.passed).length + '/' + testResults.length + ' tests passed'">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Training Day</label>
+                    <select x-model.number="submitDay"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="1">Day 1</option>
+                        <option value="2">Day 2</option>
+                        <option value="3">Day 3</option>
+                        <option value="4">Day 4</option>
+                        <option value="5">Day 5</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button @click="showSubmitModal = false"
+                    class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl font-bold text-sm transition-all">
+                    Cancel
+                </button>
+                <button @click="submitAssignment()" :disabled="isSubmitting"
+                    class="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
+                    <i class="fas" :class="isSubmitting ? 'fa-circle-notch fa-spin' : 'fa-check'"></i>
+                    <span x-text="isSubmitting ? 'Submitting...' : 'Confirm Submit'"></span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Success Toast -->
@@ -1317,6 +1623,19 @@
                 lastSubmissionTime: 0,
                 executionMode: 'container', // 'container' uses our new backend, 'judge0' uses external API
                 rp2040LEDOn: false,
+                // Assignment Submission & Grading
+                showSubmitModal: false,
+                submitDay: 1,
+                isSubmitting: false,
+                mySubmissions: [],
+                allSubmissions: [],
+                adminSubFilter: 'all',
+                adminDayFilter: '',
+                gradingSubmission: null,
+                gradingDetail: null,
+                gradeScores: { correctness: 0, codeQuality: 0, logic: 0, style: 0 },
+                gradeComments: '',
+                isGrading: false,
 
                 topics: [
                     { id: 'C_INT', name: 'Intermediate C', icon: 'fas fa-code', difficulty: 'Intermediate', projectCount: 20, desc: 'Pointers, Bit Manipulation, Algorithms.' },
@@ -1982,6 +2301,129 @@
                     } catch (e) {
                         return { error: true, compile_output: 'Failed to connect to integrated toolchain.' };
                     }
+                },
+
+                // ——— Assignment Submission & Grading Methods ———
+                async submitAssignment() {
+                    if (this.isSubmitting) return;
+                    this.isSubmitting = true;
+                    try {
+                        const passed = this.testResults.filter(r => r.passed).length;
+                        const total = this.testResults.length;
+                        const autoScore = total > 0 ? Math.round((passed / total) * 100) : 0;
+                        const topic = this.topics.find(t => t.id === this.activeProject.topicId);
+                        const response = await fetch('/api/submit', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                candidateName: this.user.name,
+                                email: this.user.email,
+                                projectId: this.activeProject.id,
+                                projectTitle: this.activeProject.title,
+                                topicId: this.activeProject.topicId,
+                                topicName: topic ? topic.name : '',
+                                day: this.submitDay,
+                                code: this.activeFiles.map(f => ({ name: f.name, content: f.content })),
+                                testResults: this.testResults.map(r => ({ name: r.name, passed: r.passed })),
+                                testsPassed: passed,
+                                testsTotal: total,
+                                autoScore: autoScore
+                            })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            this.showSubmitModal = false;
+                            this.successToast = `✅ Assignment submitted for Day ${this.submitDay}! Submission ID: ${result.submissionId}`;
+                            setTimeout(() => { this.successToast = ''; }, 5000);
+                        } else {
+                            this.successToast = '❌ Submission failed: ' + (result.error || 'Unknown error');
+                            setTimeout(() => { this.successToast = ''; }, 4000);
+                        }
+                    } catch (e) {
+                        this.successToast = '❌ Could not reach server. Is the server running?';
+                        setTimeout(() => { this.successToast = ''; }, 4000);
+                    }
+                    this.isSubmitting = false;
+                },
+
+                async loadMySubmissions() {
+                    try {
+                        const response = await fetch('/api/my-submissions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: this.user.email })
+                        });
+                        const data = await response.json();
+                        this.mySubmissions = data.map(s => ({ ...s, _expanded: false }));
+                    } catch (e) {
+                        console.error('Failed to load submissions:', e);
+                        this.mySubmissions = [];
+                    }
+                },
+
+                async loadAllSubmissions() {
+                    try {
+                        let url = '/api/submissions?';
+                        if (this.adminDayFilter) url += 'day=' + this.adminDayFilter + '&';
+                        if (this.adminSubFilter && this.adminSubFilter !== 'all') url += 'status=' + this.adminSubFilter;
+                        const response = await fetch(url);
+                        this.allSubmissions = await response.json();
+                    } catch (e) {
+                        console.error('Failed to load submissions:', e);
+                        this.allSubmissions = [];
+                    }
+                },
+
+                async openGrading(sub) {
+                    this.gradingSubmission = sub;
+                    this.gradingDetail = null;
+                    this.gradeComments = '';
+                    // Pre-fill scores if already graded
+                    if (sub.grade && sub.grade.scores) {
+                        this.gradeScores = { ...sub.grade.scores };
+                        this.gradeComments = sub.grade.comments || '';
+                    } else {
+                        this.gradeScores = { correctness: 0, codeQuality: 0, logic: 0, style: 0 };
+                    }
+                    // Fetch full submission detail (with code)
+                    try {
+                        const response = await fetch('/api/submission/' + sub.id);
+                        this.gradingDetail = await response.json();
+                    } catch (e) {
+                        console.error('Failed to load submission detail:', e);
+                    }
+                },
+
+                async submitGrade() {
+                    if (this.isGrading || !this.gradingSubmission) return;
+                    this.isGrading = true;
+                    try {
+                        const response = await fetch('/api/grade', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                submissionId: this.gradingSubmission.id,
+                                scores: this.gradeScores,
+                                comments: this.gradeComments,
+                                trainerName: this.user.name || 'Trainer'
+                            })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            this.successToast = '✅ Grade submitted successfully! Composite: ' + result.grade.compositeScore + '%';
+                            setTimeout(() => { this.successToast = ''; }, 5000);
+                            this.gradingSubmission = null;
+                            this.gradingDetail = null;
+                            this.loadAllSubmissions();
+                        } else {
+                            this.successToast = '❌ Grading failed: ' + (result.error || 'Unknown error');
+                            setTimeout(() => { this.successToast = ''; }, 4000);
+                        }
+                    } catch (e) {
+                        this.successToast = '❌ Could not reach server.';
+                        setTimeout(() => { this.successToast = ''; }, 4000);
+                    }
+                    this.isGrading = false;
                 },
 
                 downloadLogs() {
