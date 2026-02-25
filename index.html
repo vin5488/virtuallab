@@ -1926,8 +1926,24 @@
                 onLedChange(state);
             });
 
-            mcu.execute();
             activeMCU = mcu;
+
+            // Run the emulator in a non-blocking loop
+            let running = true;
+            function runLoop() {
+                if (!running || activeMCU !== mcu) return;
+
+                // Execute a batch of instructions per frame (simulating CPU time)
+                // RP2040 runs at 125MHz, browser RAF is 60Hz. 
+                // We'll execute enough instructions to keep the simulation fluid
+                for (let i = 0; i < 50000; i++) {
+                    mcu.step();
+                }
+
+                requestAnimationFrame(runLoop);
+            }
+
+            runLoop();
         };
     </script>
 </body>
