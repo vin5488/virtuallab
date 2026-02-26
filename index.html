@@ -298,6 +298,11 @@
                     <i
                         class="fas fa-user-circle text-slate-500 group-hover:text-blue-500 transition-colors text-sm"></i>
                 </div>
+                <button @click="logout()"
+                    class="w-8 h-8 rounded-full bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-600/30 flex items-center justify-center transition-all"
+                    title="Logout">
+                    <i class="fas fa-sign-out-alt text-xs"></i>
+                </button>
             </div>
         </header>
 
@@ -1969,9 +1974,71 @@
 
 
                 init() {
+                    const savedSession = localStorage.getItem('virtual_lab_session');
+                    if (savedSession) {
+                        try {
+                            const session = JSON.parse(savedSession);
+                            this.user = { ...this.user, ...session.user };
+                            this.isLoggedIn = session.isLoggedIn;
+                            this.currentView = session.currentView || 'dashboard';
+                            this.adminTab = session.adminTab || 'overview';
+
+                            if (session.selectedTopicId) {
+                                this.selectedTopic = this.topics.find(t => t.id === session.selectedTopicId) || this.topics[0];
+                            } else {
+                                this.selectedTopic = this.topics[0];
+                            }
+
+                            if (session.activeProjectId) {
+                                const proj = this.projects.find(p => p.id === session.activeProjectId);
+                                if (proj) this.selectProject(proj);
+                                else this.activeProject = this.projects[0];
+                            } else {
+                                this.activeProject = this.projects[0];
+                            }
+                        } catch (e) {
+                            console.error('Failed to restore session:', e);
+                            this.resetToDefaults();
+                        }
+                    } else {
+                        this.resetToDefaults();
+                    }
+
+                    // Watchers for persistence
+                    this.$watch('currentView', () => this.saveSession());
+                    this.$watch('adminTab', () => this.saveSession());
+                    this.$watch('activeFileIdx', () => this.saveSession());
+                },
+
+                resetToDefaults() {
                     this.selectedTopic = this.topics[0];
                     this.activeProject = this.projects[0];
                     this.activeFiles = JSON.parse(JSON.stringify(this.activeProject.files || []));
+                },
+
+                saveSession() {
+                    if (!this.isLoggedIn) return;
+                    const session = {
+                        user: this.user,
+                        isLoggedIn: this.isLoggedIn,
+                        currentView: this.currentView,
+                        adminTab: this.adminTab,
+                        selectedTopicId: this.selectedTopic?.id,
+                        activeProjectId: this.activeProject?.id
+                    };
+                    localStorage.setItem('virtual_lab_session', JSON.stringify(session));
+                },
+
+                logout() {
+                    if (confirm('Are you sure you want to logout?')) {
+                        localStorage.removeItem('virtual_lab_session');
+                        this.isLoggedIn = false;
+                        this.user = { name: '', email: '', role: 'candidate' };
+                        this.currentView = 'dashboard';
+                        this.authStep = 'role';
+                        // Force a clean state
+                        window.location.reload();
+                    }
                 },
 
                 validateEmail() {
@@ -1993,6 +2060,7 @@
                         this.user.role = 'candidate';
                         this.currentView = 'dashboard';
                         this.isLoggedIn = true;
+                        this.saveSession();
                     } else {
                         alert('Invalid Access Code');
                     }
@@ -2005,6 +2073,7 @@
                         this.currentView = 'admin_dashboard';
                         this.adminTab = 'overview';
                         this.isLoggedIn = true;
+                        this.saveSession();
                     } else {
                         alert("Invalid Admin Credentials.");
                     }
@@ -2013,6 +2082,7 @@
                 selectTopic(topic) {
                     this.selectedTopic = topic;
                     this.currentView = 'workspace';
+                    this.saveSession();
                 },
 
                 selectProject(project) {
@@ -2033,6 +2103,7 @@
                     this.testResults = [];
                     this.buildReport = null;
                     this.aiFeedback = null;
+                    this.saveSession();
                 },
 
                 get filteredProjects() {
