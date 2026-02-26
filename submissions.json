@@ -1,0 +1,38 @@
+[
+  {
+    "id": "SUB-1772085711195-9hc1",
+    "candidateName": "v",
+    "email": "v@gmail.com",
+    "projectId": "C_INT-01",
+    "projectTitle": "String Reversal",
+    "topicId": "C_INT",
+    "topicName": "Intermediate C",
+    "day": 1,
+    "code": [
+      {
+        "name": "main.c",
+        "content": "#include <stdio.h>\n#include <string.h>\n\nvoid reverse(char* str) {\n    char *start = str;\n    char *end = str + strlen(str) - 1;\n    char temp;\n    while (start < end) {\n        temp = *start;\n        *start = *end;\n        *end = temp;\n        start++;\n        end--;\n    }\n}\n\nint main() {\n    char str[101];\n    int i = 0; char c;\n    while (i < 100 && (c = getchar()) != '\\n' && c != EOF) str[i++] = c;\n    str[i] = 0;\n    if (i > 0) {\n        reverse(str);\n        printf(\"%s\\n\", str);\n    }\n    return 0;\n}\n"
+      }
+    ],
+    "testResults": [
+      {
+        "name": "Standard",
+        "passed": true
+      },
+      {
+        "name": "Palindrome",
+        "passed": true
+      },
+      {
+        "name": "Spaces",
+        "passed": true
+      }
+    ],
+    "testsPassed": 3,
+    "testsTotal": 3,
+    "autoScore": 100,
+    "status": "pending",
+    "submittedAt": "2026-02-26T06:01:51.195Z",
+    "grade": null
+  }
+]

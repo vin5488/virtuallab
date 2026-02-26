@@ -2,11 +2,15 @@ services:
   - type: web
     name: e3p-platform
     env: docker
-    plan: free
+    plan: starter
     region: oregon
-    healthCheckPath: /
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 8080
       - key: NODE_ENV
         value: production
+      - key: WORKERS
+        value: 2
+      - key: MAX_COMPILES
+        value: 8

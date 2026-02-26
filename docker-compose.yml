@@ -1,12 +1,31 @@
 version: '3.8'
 
 services:
-  antigravity-e3p:
+  virtuallab:
     build: .
     ports:
       - "8080:8080"
-    volumes:
-      - .:/app
     environment:
       - NODE_ENV=production
+      - WORKERS=4
+      - MAX_COMPILES=12
+    volumes:
+      - submissions_data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     restart: always
+    healthcheck:
+      test: [ "CMD", "node", "-e", "const http = require('http'); http.get('http://localhost:8080/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  submissions_data:
