@@ -11,10 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     binutils-arm-none-eabi \
     libnewlib-arm-none-eabi \
     qemu-system-arm \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Download FreeRTOS-Kernel (POSIX port) for FreeRTOS simulation challenges
-RUN git clone --depth 1 --branch V11.1.0 \
+RUN env GIT_SSL_NO_VERIFY=true git clone --depth 1 --branch V11.1.0 \
     https://github.com/FreeRTOS/FreeRTOS-Kernel.git /opt/freertos-kernel \
     && rm -rf /opt/freertos-kernel/.git
 
