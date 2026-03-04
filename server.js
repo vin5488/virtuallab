@@ -16,9 +16,80 @@ if (cluster.isMaster || cluster.isPrimary) {
     const NUM_WORKERS = parseInt(process.env.WORKERS) || Math.min(os.cpus().length, 4);
     console.log(`[Master PID ${process.pid}] Starting ${NUM_WORKERS} workers...`);
 
-    // Add MinGW GCC to PATH on Windows
+    // DB Schema Initialization (Master Only) - Prevents SQLite 'database is locked' errors
+    // when multiple workers start simultaneously and try to execute CREATE TABLE & PRAGMA.
     const fs = require('fs');
     const path = require('path');
+    const Database = require('better-sqlite3');
+
+    const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'virtuallab.db');
+    const dataDir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+    try {
+        const initDb = new Database(DB_PATH);
+        initDb.pragma('journal_mode = WAL');
+        initDb.pragma('synchronous = NORMAL');
+        initDb.exec(`
+          CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            role TEXT DEFAULT 'candidate',
+            password TEXT, 
+            otp TEXT,
+            otp_expires INTEGER,
+            session_state TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+          );
+
+          CREATE TABLE IF NOT EXISTS whitelist (
+            email TEXT PRIMARY KEY,
+            role TEXT DEFAULT 'candidate'
+          );
+
+          CREATE TABLE IF NOT EXISTS submissions (
+            id TEXT PRIMARY KEY,
+            candidate_name TEXT,
+            email TEXT,
+            project_id TEXT,
+            project_title TEXT,
+            topic_id TEXT,
+            topic_name TEXT,
+            day INTEGER,
+            code TEXT,
+            test_results TEXT,
+            tests_passed INTEGER DEFAULT 0,
+            tests_total INTEGER DEFAULT 0,
+            auto_score INTEGER DEFAULT 0,
+            violation_count INTEGER DEFAULT 0,
+            violation_log TEXT,
+            status TEXT DEFAULT 'pending',
+            submitted_at TEXT,
+            grade TEXT
+          );
+
+          CREATE TABLE IF NOT EXISTS progress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            files TEXT NOT NULL,
+            solved INTEGER DEFAULT 0,
+            updated_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(email, project_id)
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_submissions_email ON submissions(email);
+          CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
+          CREATE INDEX IF NOT EXISTS idx_progress_email ON progress(email);
+        `);
+        initDb.close();
+        console.log(`[Master PID ${process.pid}] SQLite Database initialized successfully.`);
+    } catch (e) {
+        console.error(`[Master PID ${process.pid}] Failed to initialize database:`, e);
+    }
+
+    // Add MinGW GCC to PATH on Windows
     if (os.platform() === 'win32') {
         const mingwPaths = [
             'C:\\msys64\\mingw64\\bin', 'C:\\msys64\\ucrt64\\bin',
@@ -160,70 +231,13 @@ console.log(`[Worker ${WORKER_ID}, PID ${process.pid}] Starting...`);
 const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');   // Write-Ahead Logging for concurrent reads
-db.pragma('synchronous = NORMAL'); // Fast + safe
+const db = new Database(DB_PATH, { timeout: 10000 });
+// Wrap PRAGMA in try-catch because if multiple workers execute it simultaneously it may throw 'database is locked', 
+// even though WAL mode is already persistently set by the master process.
+try { db.pragma('journal_mode = WAL'); } catch (e) { /* ignore */ }
+try { db.pragma('synchronous = NORMAL'); } catch (e) { /* ignore */ }
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    role TEXT DEFAULT 'candidate',
-    password TEXT, 
-    otp TEXT,
-    otp_expires INTEGER,
-    session_state TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS whitelist (
-    email TEXT PRIMARY KEY,
-    role TEXT DEFAULT 'candidate'
-  );
-
-  CREATE TABLE IF NOT EXISTS submissions (
-    id TEXT PRIMARY KEY,
-    candidate_name TEXT,
-    email TEXT,
-    project_id TEXT,
-    project_title TEXT,
-    topic_id TEXT,
-    topic_name TEXT,
-    day INTEGER,
-    code TEXT,
-    test_results TEXT,
-    tests_passed INTEGER DEFAULT 0,
-    tests_total INTEGER DEFAULT 0,
-    auto_score INTEGER DEFAULT 0,
-    violation_count INTEGER DEFAULT 0,
-    violation_log TEXT,
-    status TEXT DEFAULT 'pending',
-    submitted_at TEXT,
-    grade TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS progress (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL,
-    project_id TEXT NOT NULL,
-    files TEXT NOT NULL,
-    solved INTEGER DEFAULT 0,
-    updated_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(email, project_id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_submissions_email ON submissions(email);
-  CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
-  CREATE INDEX IF NOT EXISTS idx_progress_email ON progress(email);
-`);
-
-try {
-    // This ALTER TABLE is now redundant as session_state is added directly in CREATE TABLE
-    // db.exec("ALTER TABLE users ADD COLUMN session_state TEXT;");
-} catch (e) {
-    // Column likely already exists
-}
+// Database schema initialized in the cluster master process
 
 console.log(`[Worker ${WORKER_ID}] SQLite DB ready at: ${DB_PATH}`);
 
