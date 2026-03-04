@@ -10,6 +10,7 @@
     <!-- Internal Logic Analyzer script instead of external Wokwi -->
     <!-- No external compiler script needed for Judge0 API -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="./visteon_questions.js"></script>
 
     <!-- CodeMirror 6 for Syntax Highlighting -->
     <script type="module">
@@ -389,9 +390,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <template
-                        x-for="topic in (topicFilter.length ? topics.filter(t => topicFilter.includes(t.id)) : topics)"
-                        :key="topic.id">
+                    <template x-for="topic in allowedTopics" :key="topic.id">
                         <div @click="selectTopic(topic)"
                             class="bg-slate-900 border border-slate-800 p-8 rounded-3xl hover:border-blue-500 transition-all group cursor-pointer shadow-xl">
                             <div class="flex justify-between items-start mb-6">
@@ -1761,7 +1760,8 @@
                     { id: 'STM32_SIM', name: 'STM32 Register Programming', icon: 'fas fa-microchip', difficulty: 'Advanced', projectCount: 10, desc: 'Bare-metal C on STM32F1 — control GPIO, RCC, TIM, ADC and USART via direct register writes. Executes on QEMU Cortex-M3.' },
                     { id: 'STM32_HAL', name: 'STM32 HAL Programming', icon: 'fas fa-layer-group', difficulty: 'Intermediate', projectCount: 10, desc: 'STM32 HAL API programming — HAL_GPIO, HAL_UART, HAL_TIM, HAL_ADC, I2C, SPI. HAL calls produce observable output for automated testing.' },
                     { id: 'FREERTOS_SIM', name: 'FreeRTOS Simulation', icon: 'fas fa-tasks', difficulty: 'Advanced', projectCount: 10, desc: 'Real FreeRTOS running on the server via its POSIX/Linux port — tasks, queues, semaphores, mutexes, event groups & software timers.' },
-                    { id: 'DEBUG_LAB', name: '🔧 Bug Hunt: Debug Lab', icon: 'fas fa-bug text-red-400', difficulty: 'Advanced', projectCount: 10, desc: 'Real-world debugging challenges. Every project gives you broken code + a production incident report — find and fix the root cause. This is what Day 1 at a company actually looks like.' }
+                    { id: 'DEBUG_LAB', name: '🔧 Bug Hunt: Debug Lab', icon: 'fas fa-bug text-red-400', difficulty: 'Advanced', projectCount: 10, desc: 'Real-world debugging challenges. Every project gives you broken code + a production incident report — find and fix the root cause. This is what Day 1 at a company actually looks like.' },
+                    { id: 'VISTEON_C', name: 'Visteon C Programming Assignment Questions', icon: 'fas fa-building text-blue-500', difficulty: 'Advanced', projectCount: 100, desc: 'Exclusive intermediate to advanced C programming assignments covering structures, pointers, memory mapping, and more.' }
 
                 ],
 
@@ -1772,6 +1772,7 @@
                 ],
 
                 projects: [
+                    ...(window.VISTEON_PROJECTS || []),
                     // --- Linux System Programming (LINUX_SYS) ---
                     { id: 'LINUX-01', topicId: 'LINUX_SYS', title: 'Hello from fork()', difficulty: 'Intermediate', points: 100, statement: 'Use fork() to create a child process. The parent should print "Parent: PID <ppid>" and the child should print "Child: PID <cpid>". The parent must wait for the child to finish.\nNote: PIDs change each run — print the actual PID values using getpid().', acceptance: ['fork() used', 'Parent waits with wait()', 'Both messages printed'], deliverables: ['main.c'], inputSpec: 'None', outputSpec: 'Two lines: Parent and Child PID messages (exact PIDs differ)', files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <unistd.h>\n#include <sys/wait.h>\n\nint main() {\n    pid_t pid = fork();\n    if (pid < 0) {\n        perror("fork failed");\n        return 1;\n    }\n    // TODO:\n    // if child (pid == 0): print "Child: PID <pid>"\n    // if parent (pid > 0): wait for child, then print "Parent: PID <ppid>"\n    return 0;\n}' }], testCases: [{ name: 'Output Check', stdin: '', expectedOutput: 'Child:' }] },
 
@@ -2452,9 +2453,30 @@
                     });
                 },
 
+                get allowedTopics() {
+                    const visteonEmails = ["achandel@visteon.com", "ppranee3@visteon.com", "tnair@visteon.com", "hreddy2@visteon.com", "rraman4@visteon.com", "mayan@visteon.com", "skrishak@visteon.com", "msanthos@visteon.com", "nvijaya1@visteon.com", "psingh17@visteon.com"];
+                    if (this.user && this.user.role === 'candidate' && visteonEmails.includes(this.user.email)) {
+                        return this.topics.filter(t => t.id === 'VISTEON_C');
+                    }
+                    if (this.user && this.user.role === 'admin') {
+                        return this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
+                    }
+                    let filtered = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
+                    return filtered.filter(t => t.id !== 'VISTEON_C');
+                },
+
                 get allowedProjects() {
-                    if (!this.topicFilter.length) return this.projects;
-                    return this.projects.filter(p => this.topicFilter.includes(p.topicId));
+                    const visteonEmails = ["achandel@visteon.com", "ppranee3@visteon.com", "tnair@visteon.com", "hreddy2@visteon.com", "rraman4@visteon.com", "mayan@visteon.com", "skrishak@visteon.com", "msanthos@visteon.com", "nvijaya1@visteon.com", "psingh17@visteon.com"];
+                    if (this.user && this.user.role === 'candidate' && visteonEmails.includes(this.user.email)) {
+                        return this.projects.filter(p => p.topicId === 'VISTEON_C');
+                    }
+                    if (this.user && this.user.role === 'admin') {
+                        if (!this.topicFilter.length) return this.projects;
+                        return this.projects.filter(p => this.topicFilter.includes(p.topicId));
+                    }
+                    let allowed = this.projects.filter(p => p.topicId !== 'VISTEON_C');
+                    if (!this.topicFilter.length) return allowed;
+                    return allowed.filter(p => this.topicFilter.includes(p.topicId));
                 },
 
                 get solvedCount() { return this.solvedProjectIds.length; },
