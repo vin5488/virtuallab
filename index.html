@@ -2516,30 +2516,41 @@
 
                 get allowedTopics() {
                     const isVisteon = typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user.email);
-                    if (this.user && this.user.role === 'candidate' && isVisteon) {
-                        return this.topics.filter(t => t.id === 'VISTEON_C');
-                    }
+
+                    // 1. Admin sees everything
                     if (this.user && this.user.role === 'admin') {
-                        // Admins see everything, or at least the Filter + Visteon for testing
                         let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
                         if (!base.some(t => t.id === 'VISTEON_C')) {
                             base = [...base, this.topics.find(t => t.id === 'VISTEON_C')].filter(Boolean);
                         }
                         return base;
                     }
-                    let filtered = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
-                    return filtered.filter(t => t.id !== 'VISTEON_C');
+
+                    // 2. Visteon users see ONLY the VISTEON_C topic
+                    if (this.user && this.user.role === 'candidate' && isVisteon) {
+                        return this.topics.filter(t => t.id === 'VISTEON_C');
+                    }
+
+                    // 3. Others see everything EXCEPT Visteon
+                    let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
+                    return base.filter(t => t.id !== 'VISTEON_C');
                 },
 
                 get allowedProjects() {
                     const isVisteon = typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user.email);
+
+                    // 1. Admin sees everything
+                    if (this.user && this.user.role === 'admin') {
+                        if (!this.topicFilter.length) return this.projects;
+                        return this.projects.filter(p => this.topicFilter.includes(p.topicId) || p.topicId === 'VISTEON_C');
+                    }
+
+                    // 2. Visteon users see ONLY VISTEON_C projects
                     if (this.user && this.user.role === 'candidate' && isVisteon) {
                         return this.projects.filter(p => p.topicId === 'VISTEON_C');
                     }
-                    if (this.user && this.user.role === 'admin') {
-                        if (!this.topicFilter.length) return this.projects;
-                        return this.projects.filter(p => this.topicFilter.includes(p.topicId));
-                    }
+
+                    // 3. Others see everything EXCEPT Visteon
                     let allowed = this.projects.filter(p => p.topicId !== 'VISTEON_C');
                     if (!this.topicFilter.length) return allowed;
                     return allowed.filter(p => this.topicFilter.includes(p.topicId));
