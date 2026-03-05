@@ -11,7 +11,7 @@
     <!-- Internal Logic Analyzer script instead of external Wokwi -->
     <!-- No external compiler script needed for Judge0 API -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="./visteon_questions.js?v=202603051435"></script>
+    <script src="/visteon_questions.js?v=202603051515"></script>
 
     <!-- CodeMirror 6 for Syntax Highlighting -->
     <script type="module">
@@ -1737,26 +1737,34 @@
                 init() {
                     const urlParams = new URLSearchParams(window.location.search);
 
-                    // Fetch server config (topic filters, branding)
+                    // 1. Immediate Visteon Mode Enforcement (Strict)
+                    if (urlParams.get('client') === 'visteon') {
+                        this.topicFilter = ['VISTEON_C'];
+                        this.platformTitle = 'Visteon Embedded Lab';
+                        this.platformSubtitle = 'Exclusive C Programming Assessment Environment';
+                        this.selectedTopic = this.topics.find(t => t.id === 'VISTEON_C');
+                    }
+
+                    // 2. Load projects immediately
+                    if (window.VISTEON_PROJECTS) {
+                        this.projects.unshift(...window.VISTEON_PROJECTS);
+                        // If in Visteon mode and no project active, select the first Visteon one
+                        if (urlParams.get('client') === 'visteon' && (!this.activeProject || this.activeProject.topicId !== 'VISTEON_C')) {
+                            this.activeProject = window.VISTEON_PROJECTS[0];
+                        }
+                    }
+
+                    // 3. Fetch server config (Topic filters from Render env)
                     fetch('/api/config')
                         .then(r => r.json())
                         .then(data => {
-                            if (data.topicFilter) this.topicFilter = data.topicFilter;
-                            if (data.platformTitle) this.platformTitle = data.platformTitle;
-                            if (data.platformSubtitle) this.platformSubtitle = data.platformSubtitle;
-
-                            // URL Parameter Override for Dedicated Instances
-                            if (urlParams.get('client') === 'visteon') {
-                                this.topicFilter = ['VISTEON_C'];
-                                this.platformTitle = 'Visteon Embedded Lab';
-                                this.platformSubtitle = 'Exclusive C Programming Assessment Environment';
+                            // Only apply server config if NOT in dedicated Visteon mode
+                            if (urlParams.get('client') !== 'visteon') {
+                                if (data.topicFilter) this.topicFilter = data.topicFilter;
+                                if (data.platformTitle) this.platformTitle = data.platformTitle;
+                                if (data.platformSubtitle) this.platformSubtitle = data.platformSubtitle;
                             }
                         }).catch(() => { });
-
-                    // Load projects from external script if available
-                    if (window.VISTEON_PROJECTS) {
-                        this.projects.unshift(...window.VISTEON_PROJECTS);
-                    }
 
                     // Restore session from localStorage first for instant UI responsiveness
                     const saved = localStorage.getItem('virtual_lab_session');
