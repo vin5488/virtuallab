@@ -11,7 +11,7 @@
     <!-- Internal Logic Analyzer script instead of external Wokwi -->
     <!-- No external compiler script needed for Judge0 API -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="/visteon_questions.js?v=202603051515"></script>
+    <script src="/visteon_questions.js?v=202603051545"></script>
 
     <!-- CodeMirror 6 for Syntax Highlighting -->
     <script type="module">
@@ -1767,15 +1767,17 @@
                         }).catch(() => { });
 
                     // Restore session from localStorage first for instant UI responsiveness
+                    // Skip topic/project restoration if in Visteon mode (Visteon overrides take priority)
                     const saved = localStorage.getItem('virtual_lab_session');
+                    const isVisteonMode = urlParams.get('client') === 'visteon';
                     if (saved) {
                         try {
                             const s = JSON.parse(saved);
                             this.currentView = s.currentView || 'dashboard';
                             this.adminTab = s.adminTab || 'overview';
-                            if (s.selectedTopicId)
+                            if (!isVisteonMode && s.selectedTopicId)
                                 this.selectedTopic = this.topics.find(t => t.id === s.selectedTopicId) || this.topics[0];
-                            if (s.activeProjectId)
+                            if (!isVisteonMode && s.activeProjectId)
                                 this.activeProject = this.projects.find(p => p.id === s.activeProjectId) || this.projects[0];
                         } catch (e) { }
                     }
