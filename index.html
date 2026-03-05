@@ -204,8 +204,12 @@
                     <i class="fas fa-microchip text-white"></i>
                 </div>
                 <div>
-                    <h1 class="font-black text-lg tracking-tighter" x-text="platformTitle">SkillLync <span
-                            class="text-blue-500 uppercase text-xs tracking-widest ml-1">VirtualLab</span></h1>
+                    <h1 class="font-black text-lg tracking-tighter">
+                        <span
+                            x-text="platformTitle.includes('SkillLync') ? 'SkillLync' : platformTitle">SkillLync</span>
+                        <span x-show="platformTitle.includes('SkillLync')"
+                            class="text-blue-500 uppercase text-xs tracking-widest ml-1">VirtualLab</span>
+                    </h1>
                     <div class="flex items-center gap-2 mt-0.5">
                         <span
                             class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-widest"
@@ -1792,10 +1796,18 @@
                                         }
                                     }
 
-                                    // Auto-select Visteon if whitelisted and no selection
-                                    const isVisteon = typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user.email);
-                                    if (isVisteon && (!this.selectedTopic || this.selectedTopic.id !== 'VISTEON_C')) {
+                                    // Auto-select Visteon if whitelisted or if client=visteon param is present
+                                    const isVisteonParam = urlParams.get('client') === 'visteon';
+                                    const isVisteonWhitelist = typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user.email);
+
+                                    if ((isVisteonParam || isVisteonWhitelist) && (!this.selectedTopic || this.selectedTopic.id !== 'VISTEON_C')) {
                                         this.selectedTopic = this.topics.find(t => t.id === 'VISTEON_C');
+                                    }
+
+                                    // Force restriction if client=visteon is active
+                                    if (isVisteonParam && this.activeProject && this.activeProject.topicId !== 'VISTEON_C') {
+                                        this.activeProject = this.projects.find(p => p.topicId === 'VISTEON_C');
+                                        if (this.activeProject) this.selectProject(this.activeProject);
                                     }
 
                                     this._loadServerProgress();
