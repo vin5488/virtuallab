@@ -1764,6 +1764,7 @@
                             // Only apply server config if NOT in dedicated Visteon mode
                             if (urlParams.get('client') !== 'visteon') {
                                 if (data.topicFilter) this.topicFilter = data.topicFilter;
+                                if (data.topicVisibility) this.topicVisibility = data.topicVisibility;
                                 if (data.platformTitle) this.platformTitle = data.platformTitle;
                                 if (data.platformSubtitle) this.platformSubtitle = data.platformSubtitle;
                             }
@@ -1850,6 +1851,7 @@
 
                 // Platform config (from /api/config)
                 topicFilter: [],   // empty = show all topics
+                topicVisibility: {}, // map of topic.name -> boolean
                 platformTitle: 'SkillLyncVirtualLab',
                 platformSubtitle: 'Industrial Grade Embedded & ECU Project Platform',
 
@@ -2676,7 +2678,7 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const isVisteon = (typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email)) || (urlParams.get('client') === 'visteon');
 
-                    // 1. Admin sees everything
+                    // 1. Admin sees everything (unless explicitly filtered)
                     if (this.user && this.user.role === 'admin') {
                         let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
                         // Always allow admin to see VISTEON_C even if filtered
@@ -2687,12 +2689,17 @@
                         return base.filter(Boolean);
                     }
 
-                    // 2. Visteon users see ONLY VISTEON_C
+                    // 2. Filter by topicVisibility from JSON (if available)
+                    if (Object.keys(this.topicVisibility).length > 0) {
+                        return this.topics.filter(t => this.topicVisibility[t.name] === true);
+                    }
+
+                    // 3. Visteon users see ONLY VISTEON_C
                     if (isVisteon) {
                         return this.topics.filter(t => t.id === 'VISTEON_C');
                     }
 
-                    // 3. Others see filtered topics (excluding VISTEON_C)
+                    // 4. Others see filtered topics (excluding VISTEON_C)
                     let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
                     return base.filter(t => t.id !== 'VISTEON_C');
                 },
@@ -2701,18 +2708,24 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const isVisteon = (typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email)) || (urlParams.get('client') === 'visteon');
 
-                    // 1. Admin sees everything
+                    // 1. Admin sees everything (unless explicitly filtered)
                     if (this.user && this.user.role === 'admin') {
                         if (!this.topicFilter.length) return this.projects;
                         return this.projects.filter(p => this.topicFilter.includes(p.topicId) || p.topicId === 'VISTEON_C');
                     }
 
-                    // 2. Visteon users see ONLY VISTEON_C
+                    // 2. Filter by topicVisibility from JSON (if available)
+                    if (Object.keys(this.topicVisibility).length > 0) {
+                        const visibleTopicIds = this.topics.filter(t => this.topicVisibility[t.name] === true).map(t => t.id);
+                        return this.projects.filter(p => visibleTopicIds.includes(p.topicId));
+                    }
+
+                    // 3. Visteon users see ONLY VISTEON_C
                     if (isVisteon) {
                         return this.projects.filter(p => p.topicId === 'VISTEON_C');
                     }
 
-                    // 3. Others see filtered projects (excluding VISTEON_C)
+                    // 4. Others see filtered projects (excluding VISTEON_C)
                     let allowed = this.projects.filter(p => p.topicId !== 'VISTEON_C');
                     if (!this.topicFilter.length) return allowed;
                     return allowed.filter(p => this.topicFilter.includes(p.topicId));

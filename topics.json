@@ -1,0 +1,17 @@
+{
+    "Intermediate C": false,
+    "Advanced C": false,
+    "Intermediate C++": false,
+    "Advanced C++": false,
+    "RP2040 Emulation (Hardware-in-the-Loop) ✨": false,
+    "MCU Simulations": false,
+    "MBD Fundamentals": false,
+    "Advanced MBD & AUTOSAR": false,
+    "Linux System Programming": false,
+    "STM32 Register Programming": false,
+    "STM32 HAL Programming": true,
+    "FreeRTOS Simulation": false,
+    "Bug Hunt: Debug Lab": false,
+    "Visteon C Programming Assignment Questions": true,
+    "Visteon C Programming: Basic ECU": true
+}

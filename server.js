@@ -374,13 +374,33 @@ app.get('/health', (req, res) => {
 // PUBLIC CONFIG — Topic filter & branding for white-label instances
 // ══════════════════════════════════════════════════════
 app.get('/api/config', (req, res) => {
-    // TOPIC_FILTER: comma-separated topic IDs to show, e.g. "C_INT,C_ADV,CPP_INT,CPP_ADV"
-    // Leave unset (or empty) to show ALL topics (default behaviour)
+    let allowedTopics = [];
+
+    // 1. Try to read from topics.json (User requested)
+    try {
+        const topicsConfigPath = path.join(__dirname, 'topics.json');
+        if (fs.existsSync(topicsConfigPath)) {
+            const config = JSON.parse(fs.readFileSync(topicsConfigPath, 'utf8'));
+            // Note: The frontend uses IDs like 'VISTEON_C', but the JSON uses titles like 'Visteon C Programming'.
+            // However, the user provided a list of titles. We will pass a special 'visibility' object 
+            // OR we can map them here if we had the full list of ID-to-Title mappings.
+            // For now, let's pass the raw visibility map so the frontend can use it.
+            return res.json({
+                topicVisibility: config,
+                platformTitle: process.env.PLATFORM_TITLE || 'SkillLyncVirtualLab',
+                platformSubtitle: process.env.PLATFORM_SUBTITLE || 'Industrial Grade Embedded & ECU Project Platform'
+            });
+        }
+    } catch (e) {
+        console.error('Error reading topics.json:', e);
+    }
+
+    // 2. Fallback to existing TOPIC_FILTER env var logic
     const raw = (process.env.TOPIC_FILTER || '').trim();
-    const allowedTopics = raw ? raw.split(',').map(t => t.trim()).filter(Boolean) : [];
+    allowedTopics = raw ? raw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
     res.json({
-        topicFilter: allowedTopics,           // empty array = no filter (show all)
+        topicFilter: allowedTopics,
         platformTitle: process.env.PLATFORM_TITLE || 'SkillLyncVirtualLab',
         platformSubtitle: process.env.PLATFORM_SUBTITLE || 'Industrial Grade Embedded & ECU Project Platform'
     });
