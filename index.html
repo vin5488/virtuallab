@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkillLyncVirtualLab - Professional Embedded Simulation</title>
+    <title x-text="platformTitle + ' - Professional Embedded Simulation'">SkillLyncVirtualLab - Professional Embedded
+        Simulation</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Internal Logic Analyzer script instead of external Wokwi -->
     <!-- No external compiler script needed for Judge0 API -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="./visteon_questions.js?v=202603041728"></script>
+    <script src="./visteon_questions.js?v=202603041717"></script>
 
     <!-- CodeMirror 6 for Syntax Highlighting -->
     <script type="module">
@@ -100,10 +101,11 @@
                     <div class="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-900/40">
                         <i class="fas fa-microchip text-3xl text-white"></i>
                     </div>
-                    <h1 class="text-3xl font-extrabold tracking-tighter text-white">SkillLync<span
-                            class="text-blue-500">VirtualLab</span></h1>
+                    <h1 class="text-3xl font-extrabold tracking-tighter text-white" x-text="platformTitle">
+                        SkillLync<span class="text-blue-500">VirtualLab</span></h1>
                 </div>
-                <p class="text-slate-400 text-sm">Industrial Grade Embedded & ECU Project Platform</p>
+                <p class="text-slate-400 text-sm" x-text="platformSubtitle">Industrial Grade Embedded & ECU Project
+                    Platform</p>
             </div>
 
             <!-- Admin Login -->
@@ -202,7 +204,7 @@
                     <i class="fas fa-microchip text-white"></i>
                 </div>
                 <div>
-                    <h1 class="font-black text-lg tracking-tighter">SkillLync <span
+                    <h1 class="font-black text-lg tracking-tighter" x-text="platformTitle">SkillLync <span
                             class="text-blue-500 uppercase text-xs tracking-widest ml-1">VirtualLab</span></h1>
                     <div class="flex items-center gap-2 mt-0.5">
                         <span
@@ -1729,6 +1731,23 @@
                 allSubmissions: [],
 
                 init() {
+                    // Fetch server config (topic filters, branding)
+                    fetch('/api/config')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.topicFilter) this.topicFilter = data.topicFilter;
+                            if (data.platformTitle) this.platformTitle = data.platformTitle;
+                            if (data.platformSubtitle) this.platformSubtitle = data.platformSubtitle;
+
+                            // URL Parameter Override for Dedicated Instances
+                            const urlParams = new URLSearchParams(window.location.search);
+                            if (urlParams.get('client') === 'visteon') {
+                                this.topicFilter = ['VISTEON_C'];
+                                this.platformTitle = 'Visteon Embedded Lab';
+                                this.platformSubtitle = 'Exclusive C Programming Assessment Environment';
+                            }
+                        }).catch(() => { });
+
                     // Load projects from external script if available
                     if (window.VISTEON_PROJECTS) {
                         this.projects.unshift(...window.VISTEON_PROJECTS);
@@ -1773,14 +1792,10 @@
                                         }
                                     }
 
-                                    // Auto-select based on client whitelist if no selection
+                                    // Auto-select Visteon if whitelisted and no selection
                                     const isVisteon = typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user.email);
-                                    const isCOnly = typeof window.isCOnlyClient === 'function' && window.isCOnlyClient(this.user.email);
-
                                     if (isVisteon && (!this.selectedTopic || this.selectedTopic.id !== 'VISTEON_C')) {
                                         this.selectedTopic = this.topics.find(t => t.id === 'VISTEON_C');
-                                    } else if (isCOnly && (!this.selectedTopic || (this.selectedTopic.id !== 'C_INT' && this.selectedTopic.id !== 'C_ADV'))) {
-                                        this.selectedTopic = this.topics.find(t => t.id === 'C_INT');
                                     }
 
                                     this._loadServerProgress();
@@ -2519,13 +2534,17 @@
                 },
 
                 get allowedTopics() {
-                    const isVisteon = typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email);
-                    const isCOnly = typeof window.isCOnlyClient === 'function' && window.isCOnlyClient(this.user?.email);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const isVisteon = (typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email)) || (urlParams.get('client') === 'visteon');
 
                     // 1. Admin sees everything
                     if (this.user && this.user.role === 'admin') {
                         let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
-                        if (!base.some(t => t.id === 'VISTEON_C')) base.push(this.topics.find(t => t.id === 'VISTEON_C'));
+                        // Always allow admin to see VISTEON_C even if filtered
+                        if (!base.some(t => t.id === 'VISTEON_C')) {
+                            const visteonTopic = this.topics.find(t => t.id === 'VISTEON_C');
+                            if (visteonTopic) base.push(visteonTopic);
+                        }
                         return base.filter(Boolean);
                     }
 
@@ -2534,19 +2553,14 @@
                         return this.topics.filter(t => t.id === 'VISTEON_C');
                     }
 
-                    // 3. C-Only users see ONLY C_INT and C_ADV
-                    if (isCOnly) {
-                        return this.topics.filter(t => t.id === 'C_INT' || t.id === 'C_ADV');
-                    }
-
-                    // 4. Others see everything EXCEPT VISTEON_C
+                    // 3. Others see filtered topics (excluding VISTEON_C)
                     let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
                     return base.filter(t => t.id !== 'VISTEON_C');
                 },
 
                 get allowedProjects() {
-                    const isVisteon = typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email);
-                    const isCOnly = typeof window.isCOnlyClient === 'function' && window.isCOnlyClient(this.user?.email);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const isVisteon = (typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email)) || (urlParams.get('client') === 'visteon');
 
                     // 1. Admin sees everything
                     if (this.user && this.user.role === 'admin') {
@@ -2559,19 +2573,14 @@
                         return this.projects.filter(p => p.topicId === 'VISTEON_C');
                     }
 
-                    // 3. C-Only users see ONLY C_INT and C_ADV
-                    if (isCOnly) {
-                        return this.projects.filter(p => p.topicId === 'C_INT' || p.topicId === 'C_ADV');
-                    }
-
-                    // 4. Others see everything EXCEPT VISTEON_C
+                    // 3. Others see filtered projects (excluding VISTEON_C)
                     let allowed = this.projects.filter(p => p.topicId !== 'VISTEON_C');
                     if (!this.topicFilter.length) return allowed;
                     return allowed.filter(p => this.topicFilter.includes(p.topicId));
                 },
 
                 get solvedCount() { return this.solvedProjectIds.length; },
-                get totalProgress() { return Math.round((this.solvedCount / (this.selectedTopic?.id === 'VISTEON_C' ? 100 : (this.allowedProjects.length || this.projects.length))) * 100) || 0; },
+                get totalProgress() { return Math.round((this.solvedCount / (this.selectedTopic?.id === 'VISTEON_C' ? 11 : (this.allowedProjects.length || this.projects.length))) * 100) || 0; },
                 get totalPointsEarned() {
                     return this.projects.filter(p => this.solvedProjectIds.includes(p.id))
                         .reduce((sum, p) => sum + p.points, 0);
