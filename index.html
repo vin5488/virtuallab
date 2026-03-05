@@ -2580,7 +2580,7 @@
                 },
 
                 get solvedCount() { return this.solvedProjectIds.length; },
-                get totalProgress() { return Math.round((this.solvedCount / (this.selectedTopic?.id === 'VISTEON_C' ? 11 : (this.allowedProjects.length || this.projects.length))) * 100) || 0; },
+                get totalProgress() { return Math.round((this.solvedCount / (this.selectedTopic?.id === 'VISTEON_C' ? 21 : (this.allowedProjects.length || this.projects.length))) * 100) || 0; },
                 get totalPointsEarned() {
                     return this.projects.filter(p => this.solvedProjectIds.includes(p.id))
                         .reduce((sum, p) => sum + p.points, 0);
