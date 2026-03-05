@@ -11,7 +11,7 @@
     <!-- Internal Logic Analyzer script instead of external Wokwi -->
     <!-- No external compiler script needed for Judge0 API -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="./visteon_questions.js?v=202603051210"></script>
+    <script src="./visteon_questions.js?v=202603051435"></script>
 
     <!-- CodeMirror 6 for Syntax Highlighting -->
     <script type="module">
@@ -1735,6 +1735,8 @@
                 allSubmissions: [],
 
                 init() {
+                    const urlParams = new URLSearchParams(window.location.search);
+
                     // Fetch server config (topic filters, branding)
                     fetch('/api/config')
                         .then(r => r.json())
@@ -1744,7 +1746,6 @@
                             if (data.platformSubtitle) this.platformSubtitle = data.platformSubtitle;
 
                             // URL Parameter Override for Dedicated Instances
-                            const urlParams = new URLSearchParams(window.location.search);
                             if (urlParams.get('client') === 'visteon') {
                                 this.topicFilter = ['VISTEON_C'];
                                 this.platformTitle = 'Visteon Embedded Lab';
