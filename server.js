@@ -1025,14 +1025,26 @@ app.post('/compile', compileRateLimit, async (req, res) => {
 // ══════════════════════════════════════════════════════
 const staticCache = {};
 
+function getTopicVisibility() {
+    try {
+        const topicsConfigPath = path.join(__dirname, 'topics.json');
+        if (fs.existsSync(topicsConfigPath)) {
+            return JSON.parse(fs.readFileSync(topicsConfigPath, 'utf8'));
+        }
+    } catch (e) { /* ignore */ }
+    return {};
+}
+
 app.use((req, res, next) => {
     if (req.path.startsWith('/api/') || req.path === '/compile' || req.path === '/health') {
         return next();
     }
 
+    const isHtml = req.path === '/' || req.path.endsWith('.html');
     let filePath = path.join(__dirname, req.path === '/' ? 'index.html' : req.path);
 
-    if (staticCache[filePath]) {
+    // For non-HTML files, use cache as before
+    if (!isHtml && staticCache[filePath]) {
         const { data, contentType } = staticCache[filePath];
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'public, max-age=300');
@@ -1052,15 +1064,30 @@ app.use((req, res, next) => {
             if (req.path !== '/') {
                 return res.status(404).send('Not found');
             }
-            const indexPath = path.join(__dirname, 'index.html');
-            return fs.readFile(indexPath, (e2, d2) => {
+            filePath = path.join(__dirname, 'index.html');
+            return fs.readFile(filePath, (e2, d2) => {
                 if (e2) return res.status(404).send('Not found');
-                if (d2.length < 5 * 1024 * 1024) staticCache[indexPath] = { data: d2, contentType: 'text/html' };
+                // Inject topicVisibility so frontend has it instantly (no race condition)
+                const topicVisibility = getTopicVisibility();
+                const injectedScript = `<script>window.__INITIAL_TOPIC_VISIBILITY__ = ${JSON.stringify(topicVisibility)};</script>`;
+                const html = d2.toString().replace('</head>', injectedScript + '</head>');
                 res.setHeader('Content-Type', 'text/html');
-                res.send(d2);
+                res.setHeader('Cache-Control', 'no-cache');
+                res.send(html);
             });
         }
-        if (extname === '.html' && data.length < 5 * 1024 * 1024) staticCache[filePath] = { data, contentType };
+
+        if (isHtml) {
+            // Inject topicVisibility so frontend has it instantly (no race condition)
+            const topicVisibility = getTopicVisibility();
+            const injectedScript = `<script>window.__INITIAL_TOPIC_VISIBILITY__ = ${JSON.stringify(topicVisibility)};</script>`;
+            const html = data.toString().replace('</head>', injectedScript + '</head>');
+            res.setHeader('Content-Type', 'text/html');
+            res.setHeader('Cache-Control', 'no-cache');
+            return res.send(html);
+        }
+
+        if (data.length < 5 * 1024 * 1024) staticCache[filePath] = { data, contentType };
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'public, max-age=300');
         res.send(data);

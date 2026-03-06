@@ -14,7 +14,7 @@
     "@wokwi/elements": "^1.9.1",
     "acorn": "^8.16.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^9.4.3",
+    "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.19.2",
