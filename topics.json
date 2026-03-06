@@ -9,9 +9,9 @@
     "Advanced MBD & AUTOSAR": false,
     "Linux System Programming": false,
     "STM32 Register Programming": false,
-    "STM32 HAL Programming": true,
+    "STM32 HAL Programming": false,
     "FreeRTOS Simulation": false,
     "Bug Hunt: Debug Lab": false,
-    "Visteon C Programming Assignment Questions": true,
+    "Visteon C Programming Assignment Questions": false,
     "Visteon C Programming: Basic ECU": true
 }

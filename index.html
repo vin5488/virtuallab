@@ -1851,7 +1851,7 @@
 
                 // Platform config (from /api/config)
                 topicFilter: [],   // empty = show all topics
-                topicVisibility: {}, // map of topic.name -> boolean
+                topicVisibility: window.__INITIAL_TOPIC_VISIBILITY__ || {}, // pre-injected by server
                 platformTitle: 'SkillLyncVirtualLab',
                 platformSubtitle: 'Industrial Grade Embedded & ECU Project Platform',
 
@@ -1870,7 +1870,7 @@
                     { id: 'FREERTOS_SIM', name: 'FreeRTOS Simulation', icon: 'fas fa-tasks', difficulty: 'Advanced', projectCount: 10, desc: 'Real FreeRTOS running on the server via its POSIX/Linux port — tasks, queues, semaphores, mutexes, event groups & software timers.' },
                     { id: 'DEBUG_LAB', name: '🔧 Bug Hunt: Debug Lab', icon: 'fas fa-bug text-red-400', difficulty: 'Advanced', projectCount: 10, desc: 'Real-world debugging challenges. Every project gives you broken code + a production incident report — find and fix the root cause. This is what Day 1 at a company actually looks like.' },
                     { id: 'VISTEON_C', name: 'Visteon C Programming Assignment Questions', icon: 'fas fa-building text-blue-500', difficulty: 'Advanced', projectCount: 100, desc: 'Exclusive intermediate to advanced C programming assignments covering structures, pointers, memory mapping, and more.' },
-                    { id: 'VISTEON_C_BASIC', name: 'Visteon C Programming: Basic ECU', icon: 'fas fa-car-side text-blue-400', difficulty: 'Basic', projectCount: 10, desc: 'Focus on core ECU control logic using basic C constructs: if-else, switch-case, and while loops. Simulates real vehicle control units.' }
+                    { id: 'VISTEON_C_BASIC', name: 'Visteon C Programming: Basic ECU', icon: 'fas fa-car-side text-blue-400', difficulty: 'Basic', projectCount: 40, desc: 'Focus on core ECU control logic using basic C constructs: if-else, switch-case, and while loops. Simulates real vehicle control units.' }
                 ],
 
 
@@ -2024,6 +2024,278 @@
                         files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int i, b;\n    while(scanf("%d %d", &i, &b) == 2) {\n        if(i > 30 || (i > 20 && b == 0)) printf("DEPLOYED\\n");\n        else printf("Normal\\n");\n    }\n    return 0;\n}' }],
                         testCases: [{ name: 'Deploy', stdin: '35 1', expectedOutput: 'DEPLOYED' }]
                     },
+                    // --- Visteon C Basic ECU: Assignment Questions A1-A15 ---
+                    {
+                        id: 'ECU-A1a', topicId: 'VISTEON_C_BASIC', title: 'A1a: Traffic Light State Machine', difficulty: 'Basic', points: 100,
+                        statement: 'Design a traffic light controller using switch-case and enums with states: RED, YELLOW, GREEN, FAULT.\nEach state must print a message and transition to the next valid state.\nHandle invalid states with a default FAULT case.',
+                        acceptance: ['Enum used for states', 'switch-case for transitions', 'Default FAULT case'], deliverables: ['main.c'],
+                        inputSpec: 'State (int: 0=RED, 1=YELLOW, 2=GREEN)', outputSpec: 'State message',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\ntypedef enum { RED=0, YELLOW, GREEN, FAULT } TrafficState;\n\nint main() {\n    int s;\n    while(scanf("%d", &s) == 1) {\n        TrafficState state = (s >= 0 && s <= 2) ? (TrafficState)s : FAULT;\n        switch(state) {\n            case RED:    printf("RED: Stop\\n"); break;\n            case YELLOW: printf("YELLOW: Caution\\n"); break;\n            case GREEN:  printf("GREEN: Go\\n"); break;\n            default:     printf("FAULT: Invalid State\\n"); break;\n        }\n    }\n    return 0;\n}' }],
+                        testCases: [{ name: 'RED', stdin: '0', expectedOutput: 'RED: Stop' }, { name: 'GREEN', stdin: '2', expectedOutput: 'GREEN: Go' }, { name: 'FAULT', stdin: '9', expectedOutput: 'FAULT: Invalid State' }]
+                    },
+
+                    {
+                        id: 'ECU-A1b', topicId: 'VISTEON_C_BASIC', title: 'A1b: Vehicle Mode Controller', difficulty: 'Basic', points: 100,
+                        statement: 'Create a Vehicle Mode Controller using enum and switch-case with modes: OFF, ACC, IGNITION_ON, FAULT.\nHandle invalid mode values safely and print appropriate system behavior for each mode.',
+                        acceptance: ['Enum for modes', 'switch-case used', 'Invalid input goes to FAULT'], deliverables: ['main.c'],
+                        inputSpec: 'Mode (int: 0=OFF, 1=ACC, 2=IGNITION_ON)', outputSpec: 'Mode behavior message',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\ntypedef enum { OFF=0, ACC, IGNITION_ON, FAULT } VehicleMode;\n\nint main() {\n    int m;\n    while(scanf("%d", &m) == 1) {\n        VehicleMode mode = (m >= 0 && m <= 2) ? (VehicleMode)m : FAULT;\n        switch(mode) {\n            case OFF:         printf("System OFF\\n"); break;\n            case ACC:         printf("ACC: Accessories ON\\n"); break;\n            case IGNITION_ON: printf("IGNITION ON: Engine Ready\\n"); break;\n            default:          printf("FAULT: Invalid Mode\\n"); break;\n        }\n    }\n    return 0;\n}' }],
+                        testCases: [{ name: 'OFF', stdin: '0', expectedOutput: 'System OFF' }, { name: 'ACC', stdin: '1', expectedOutput: 'ACC: Accessories ON' }, { name: 'FAULT', stdin: '5', expectedOutput: 'FAULT: Invalid Mode' }]
+                    },
+
+                    {
+                        id: 'ECU-A2a', topicId: 'VISTEON_C_BASIC', title: 'A2a: Static Counter Demo', difficulty: 'Basic', points: 100,
+                        statement: 'Write a function call_counter() that uses a static variable to count how many times it has been called.\nCall it 5 times from main() and print the count each time.\nExplain in a comment why the count persists across calls.',
+                        acceptance: ['static variable used in function', 'Count increments correctly', 'Printed 5 times'], deliverables: ['main.c'],
+                        inputSpec: 'None', outputSpec: 'Call: 1\nCall: 2\nCall: 3\nCall: 4\nCall: 5',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nvoid call_counter() {\n    // static persists across calls unlike auto\n    static int count = 0;\n    count++;\n    printf("Call: %d\\n", count);\n}\n\nint main() {\n    call_counter();\n    call_counter();\n    call_counter();\n    call_counter();\n    call_counter();\n    return 0;\n}' }],
+                        testCases: [{ name: 'Count', stdin: '', expectedOutput: 'Call: 1\nCall: 2\nCall: 3\nCall: 4\nCall: 5' }]
+                    },
+
+                    {
+                        id: 'ECU-A2b', topicId: 'VISTEON_C_BASIC', title: 'A2b: Scope & Lifetime Logger', difficulty: 'Basic', points: 100,
+                        statement: 'Demonstrate differences between auto, static, and global variables.\nCreate a function log_vars() that increments a static local, a global, and prints both.\nCall it 3 times and observe which values reset and which persist.',
+                        acceptance: ['global variable used', 'static local used', 'auto local resets each call'], deliverables: ['main.c'],
+                        inputSpec: 'None', outputSpec: 'global=1 static=1\nglobal=2 static=2\nglobal=3 static=3',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint global_count = 0;\n\nvoid log_vars() {\n    static int static_count = 0;\n    int auto_count = 0; // resets every call\n    global_count++;\n    static_count++;\n    auto_count++;\n    printf("global=%d static=%d\\n", global_count, static_count);\n}\n\nint main() {\n    log_vars();\n    log_vars();\n    log_vars();\n    return 0;\n}' }],
+                        testCases: [{ name: 'Scope', stdin: '', expectedOutput: 'global=1 static=1\nglobal=2 static=2\nglobal=3 static=3' }]
+                    },
+
+                    {
+                        id: 'ECU-A3a', topicId: 'VISTEON_C_BASIC', title: 'A3a: Sensor Calibration via Pointer', difficulty: 'Basic', points: 100,
+                        statement: 'Write a function calibrate_sensor(float *value, float offset) that adjusts a sensor reading by adding an offset using a pointer.\nReturn 0 on success, -1 if pointer is NULL.\nRead value and offset from input, print calibrated result or error.',
+                        acceptance: ['NULL check on pointer', 'Value updated via pointer', 'Status code returned'], deliverables: ['main.c'],
+                        inputSpec: 'value(float) offset(float)', outputSpec: 'Calibrated: <value> or ERROR: NULL pointer',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint calibrate_sensor(float *value, float offset) {\n    if (value == NULL) return -1;\n    *value += offset;\n    return 0;\n}\n\nint main() {\n    float v, o;\n    scanf("%f %f", &v, &o);\n    int status = calibrate_sensor(&v, o);\n    if (status == 0) printf("Calibrated: %.2f\\n", v);\n    else printf("ERROR: NULL pointer\\n");\n    return 0;\n}' }],
+                        testCases: [{ name: 'Valid', stdin: '98.5 1.5', expectedOutput: 'Calibrated: 100.00' }, { name: 'Negative offset', stdin: '105.0 -5.0', expectedOutput: 'Calibrated: 100.00' }]
+                    },
+
+                    {
+                        id: 'ECU-A3b', topicId: 'VISTEON_C_BASIC', title: 'A3b: Vehicle Speed Updater', difficulty: 'Basic', points: 100,
+                        statement: 'Write a function update_speed(int *speed, int new_speed) that updates a vehicle speed variable via pointer.\nReturn 0 on success, -1 if speed is out of range (0-300 km/h) or pointer is NULL.\nPrint updated speed or error message.',
+                        acceptance: ['Pointer used to update', 'Range 0-300 validated', 'NULL pointer handled'], deliverables: ['main.c'],
+                        inputSpec: 'new_speed(int)', outputSpec: 'Speed: <value> km/h or ERROR: Invalid speed',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint update_speed(int *speed, int new_speed) {\n    if (speed == NULL || new_speed < 0 || new_speed > 300) return -1;\n    *speed = new_speed;\n    return 0;\n}\n\nint main() {\n    int ns, speed = 0;\n    scanf("%d", &ns);\n    if (update_speed(&speed, ns) == 0) printf("Speed: %d km/h\\n", speed);\n    else printf("ERROR: Invalid speed\\n");\n    return 0;\n}' }],
+                        testCases: [{ name: 'Valid', stdin: '120', expectedOutput: 'Speed: 120 km/h' }, { name: 'Over limit', stdin: '350', expectedOutput: 'ERROR: Invalid speed' }, { name: 'Negative', stdin: '-10', expectedOutput: 'ERROR: Invalid speed' }]
+                    },
+
+                    {
+                        id: 'ECU-A4a', topicId: 'VISTEON_C_BASIC', title: 'A4a: CAN Signal Average', difficulty: 'Intermediate', points: 120,
+                        statement: 'Read 8 CAN signal values into an array.\nCalculate the average using a pointer that traverses the array — no index notation allowed.\nPrint each value and the final average.',
+                        acceptance: ['Pointer arithmetic used (no index [])', 'Average calculated correctly', 'All values printed'], deliverables: ['main.c'],
+                        inputSpec: '8 integers on one line', outputSpec: 'Each value then: Average: <value>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int arr[8], *p;\n    for (p = arr; p < arr + 8; p++) scanf("%d", p);\n    printf("Values:");\n    for (p = arr; p < arr + 8; p++) printf(" %d", *p);\n    printf("\\n");\n    int sum = 0;\n    for (p = arr; p < arr + 8; p++) sum += *p;\n    printf("Average: %d\\n", sum / 8);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Average', stdin: '10 20 30 40 50 60 70 80', expectedOutput: 'Average: 45' }]
+                    },
+
+                    {
+                        id: 'ECU-A4b', topicId: 'VISTEON_C_BASIC', title: 'A4b: CAN Signal Max Finder', difficulty: 'Intermediate', points: 120,
+                        statement: 'Read 8 CAN signal values into an array.\nFind the maximum value by traversing using pointer arithmetic only (no index notation).\nPrint the max value and its position (0-indexed).',
+                        acceptance: ['Pointer arithmetic only', 'Max value found', 'Position printed'], deliverables: ['main.c'],
+                        inputSpec: '8 integers', outputSpec: 'Max: <value> Position: <pos>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int arr[8], *p;\n    for (p = arr; p < arr + 8; p++) scanf("%d", p);\n    int *max_p = arr;\n    for (p = arr + 1; p < arr + 8; p++)\n        if (*p > *max_p) max_p = p;\n    printf("Max: %d Position: %d\\n", *max_p, (int)(max_p - arr));\n    return 0;\n}' }],
+                        testCases: [{ name: 'Max', stdin: '10 55 30 80 20 70 40 60', expectedOutput: 'Max: 80 Position: 3' }]
+                    },
+
+                    {
+                        id: 'ECU-A5a', topicId: 'VISTEON_C_BASIC', title: 'A5a: ECU Sensor Matrix', difficulty: 'Intermediate', points: 120,
+                        statement: 'Model 3 sensors (speed, RPM, temp) over 4 time steps in a 2D array [3][4].\nUse pointer expressions to print each row (sensor type).\nInput: 12 values row by row.',
+                        acceptance: ['2D array used', 'Pointer expressions for access', 'All rows printed'], deliverables: ['main.c'],
+                        inputSpec: '12 integers (3 rows x 4 cols)', outputSpec: 'Speed: v1 v2 v3 v4\nRPM: v1 v2 v3 v4\nTemp: v1 v2 v3 v4',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int sensors[3][4];\n    const char *names[] = {"Speed", "RPM", "Temp"};\n    int *p = &sensors[0][0];\n    for (int i = 0; i < 12; i++) scanf("%d", p + i);\n    for (int r = 0; r < 3; r++) {\n        printf("%s:", names[r]);\n        for (int c = 0; c < 4; c++) printf(" %d", *(*(sensors + r) + c));\n        printf("\\n");\n    }\n    return 0;\n}' }],
+                        testCases: [{ name: 'Matrix', stdin: '60 65 70 75 3000 3100 3200 3300 85 87 90 92', expectedOutput: 'Speed: 60 65 70 75\nRPM: 3000 3100 3200 3300\nTemp: 85 87 90 92' }]
+                    },
+
+                    {
+                        id: 'ECU-A5b', topicId: 'VISTEON_C_BASIC', title: 'A5b: Sensor Reading Logger', difficulty: 'Intermediate', points: 120,
+                        statement: 'Read sensor readings (speed, RPM, temperature) over 3 time steps into a 2D array [3][3].\nAccess and print all values using pointer expressions only.\nPrint in format: T<step>: speed=<v> rpm=<v> temp=<v>',
+                        acceptance: ['Pointer expressions used', 'Row-major traversal', 'Correct format'], deliverables: ['main.c'],
+                        inputSpec: '9 integers (3 time steps, each: speed rpm temp)', outputSpec: 'T0: speed=v rpm=v temp=v (x3)',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int data[3][3];\n    int *p = &data[0][0];\n    for (int i = 0; i < 9; i++) scanf("%d", p + i);\n    for (int t = 0; t < 3; t++)\n        printf("T%d: speed=%d rpm=%d temp=%d\\n", t, *(*(data+t)+0), *(*(data+t)+1), *(*(data+t)+2));\n    return 0;\n}' }],
+                        testCases: [{ name: 'Log', stdin: '60 3000 85 70 3200 90 80 3500 95', expectedOutput: 'T0: speed=60 rpm=3000 temp=85\nT1: speed=70 rpm=3200 temp=90\nT2: speed=80 rpm=3500 temp=95' }]
+                    },
+
+                    {
+                        id: 'ECU-A6a', topicId: 'VISTEON_C_BASIC', title: 'A6a: DTC Code Validator', difficulty: 'Intermediate', points: 120,
+                        statement: 'Read a DTC (Diagnostic Trouble Code) string and validate it:\n- Must be exactly 5 characters\n- Must start with P, C, B, or U\nUse pointer traversal. Do not use strlen().\nPrint VALID or INVALID.',
+                        acceptance: ['No strlen() used', 'Pointer traversal for length', 'First char checked'], deliverables: ['main.c'],
+                        inputSpec: 'DTC string', outputSpec: 'VALID or INVALID',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    char dtc[32];\n    scanf("%s", dtc);\n    char *p = dtc;\n    int len = 0;\n    while (*p++) len++;\n    char first = dtc[0];\n    if (len == 5 && (first==\'P\'||first==\'C\'||first==\'B\'||first==\'U\'))\n        printf("VALID\\n");\n    else\n        printf("INVALID\\n");\n    return 0;\n}' }],
+                        testCases: [{ name: 'Valid P', stdin: 'P0300', expectedOutput: 'VALID' }, { name: 'Invalid short', stdin: 'P030', expectedOutput: 'INVALID' }, { name: 'Invalid prefix', stdin: 'X0300', expectedOutput: 'INVALID' }]
+                    },
+
+                    {
+                        id: 'ECU-A6b', topicId: 'VISTEON_C_BASIC', title: 'A6b: Safe String Copy', difficulty: 'Intermediate', points: 120,
+                        statement: 'Implement a safe_strcpy(char *dst, const char *src, int max_len) function that:\n- Copies src to dst without overflow\n- Returns 0 on success, -1 if src is too long\nDo not use strcpy(). Read a string and max_len from input.',
+                        acceptance: ['No strcpy()', 'Buffer size checked', 'Status code returned'], deliverables: ['main.c'],
+                        inputSpec: 'max_len(int) src_string', outputSpec: 'Copied: <string> or ERROR: Overflow',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint safe_strcpy(char *dst, const char *src, int max_len) {\n    const char *s = src; int len = 0;\n    while (*s++) len++;\n    if (len >= max_len) return -1;\n    char *d = dst; s = src;\n    while ((*d++ = *s++));\n    return 0;\n}\n\nint main() {\n    int ml; char src[128], dst[128];\n    scanf("%d %s", &ml, src);\n    if (safe_strcpy(dst, src, ml) == 0) printf("Copied: %s\\n", dst);\n    else printf("ERROR: Overflow\\n");\n    return 0;\n}' }],
+                        testCases: [{ name: 'OK', stdin: '20 HelloECU', expectedOutput: 'Copied: HelloECU' }, { name: 'Overflow', stdin: '3 HelloECU', expectedOutput: 'ERROR: Overflow' }]
+                    },
+
+                    {
+                        id: 'ECU-A7a', topicId: 'VISTEON_C_BASIC', title: 'A7a: CAN Frame Struct', difficulty: 'Intermediate', points: 150,
+                        statement: 'Create a struct CAN_Frame with fields: id (unsigned int), dlc (unsigned char), data[8] (unsigned char).\nRead id, dlc, and dlc bytes of data from input.\nPrint the frame details using a struct pointer.',
+                        acceptance: ['Struct defined correctly', 'Struct pointer used', 'All fields printed'], deliverables: ['main.c'],
+                        inputSpec: 'id dlc data[0..dlc-1]', outputSpec: 'ID:<id> DLC:<dlc> DATA:<hex bytes>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\ntypedef struct { unsigned int id; unsigned char dlc; unsigned char data[8]; } CAN_Frame;\n\nvoid print_frame(CAN_Frame *f) {\n    printf("ID:%u DLC:%u DATA:", f->id, f->dlc);\n    for (int i = 0; i < f->dlc; i++) printf("%02X ", f->data[i]);\n    printf("\\n");\n}\n\nint main() {\n    CAN_Frame frame;\n    scanf("%u %hhu", &frame.id, &frame.dlc);\n    for (int i = 0; i < frame.dlc; i++) scanf("%hhu", &frame.data[i]);\n    print_frame(&frame);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Frame', stdin: '291 3 10 20 30', expectedOutput: 'ID:291 DLC:3 DATA:0A 14 1E' }]
+                    },
+
+                    {
+                        id: 'ECU-A7b', topicId: 'VISTEON_C_BASIC', title: 'A7b: Vehicle Status Manager', difficulty: 'Intermediate', points: 150,
+                        statement: 'Create a struct VehicleStatus with fields: speed (int), fuel (int), warning (int).\nWrite update_status() and print_status() functions using struct pointers.\nRead speed and fuel from input; set warning=1 if speed>120 or fuel<10.',
+                        acceptance: ['Struct pointer in functions', 'Warning logic correct', 'All fields printed'], deliverables: ['main.c'],
+                        inputSpec: 'speed(int) fuel(int)', outputSpec: 'Speed:<v> Fuel:<v> Warning:<0/1>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\ntypedef struct { int speed; int fuel; int warning; } VehicleStatus;\n\nvoid update_status(VehicleStatus *vs, int s, int f) {\n    vs->speed = s; vs->fuel = f;\n    vs->warning = (s > 120 || f < 10) ? 1 : 0;\n}\n\nvoid print_status(VehicleStatus *vs) {\n    printf("Speed:%d Fuel:%d Warning:%d\\n", vs->speed, vs->fuel, vs->warning);\n}\n\nint main() {\n    VehicleStatus vs;\n    int s, f; scanf("%d %d", &s, &f);\n    update_status(&vs, s, f);\n    print_status(&vs);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Normal', stdin: '80 50', expectedOutput: 'Speed:80 Fuel:50 Warning:0' }, { name: 'Warning', stdin: '130 5', expectedOutput: 'Speed:130 Fuel:5 Warning:1' }]
+                    },
+
+                    {
+                        id: 'ECU-A8a', topicId: 'VISTEON_C_BASIC', title: 'A8a: ECU Fault Flag Register', difficulty: 'Intermediate', points: 150,
+                        statement: 'Use a uint16_t as a fault register with 8 flags (bits 0-7).\nRead a flag number (0-7) and operation (S=set, C=clear, K=check).\nPrint the register value in hex after set/clear, or print flag status for check.',
+                        acceptance: ['Bitwise SET/CLEAR/CHECK', 'Hex output correct', 'Flag bounds checked'], deliverables: ['main.c'],
+                        inputSpec: 'flag(0-7) op(S/C/K)', outputSpec: 'REG:0x<hex> or FLAG:<0/1>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\nint main() {\n    uint16_t reg = 0;\n    int flag; char op;\n    scanf("%d %c", &flag, &op);\n    if (op == \'S\') { reg |= (1 << flag);  printf("REG:0x%04X\\n", reg); }\n    else if (op == \'C\') { reg &= ~(1 << flag); printf("REG:0x%04X\\n", reg); }\n    else if (op == \'K\') printf("FLAG:%d\\n", (reg >> flag) & 1);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Set flag 3', stdin: '3 S', expectedOutput: 'REG:0x0008' }, { name: 'Check flag 0', stdin: '0 K', expectedOutput: 'FLAG:0' }]
+                    },
+
+                    {
+                        id: 'ECU-A8b', topicId: 'VISTEON_C_BASIC', title: 'A8b: Vehicle Feature Flags', difficulty: 'Intermediate', points: 150,
+                        statement: 'Use a uint32_t to control 4 vehicle features via bits:\nBit 0=lights, 1=indicators, 2=buzzer, 3=AC.\nRead feature (0-3) and op (S=set, C=clear, T=toggle, K=check).\nPrint register value or feature status.',
+                        acceptance: ['All 4 operations work', 'Correct bit positions', 'Hex output'], deliverables: ['main.c'],
+                        inputSpec: 'feature(0-3) op(S/C/T/K)', outputSpec: 'REG:0x<hex> or FEAT:<0/1>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\nint main() {\n    uint32_t reg = 0;\n    int feat; char op;\n    scanf("%d %c", &feat, &op);\n    if      (op==\'S\') { reg |=  (1u<<feat); printf("REG:0x%08X\\n", reg); }\n    else if (op==\'C\') { reg &= ~(1u<<feat); printf("REG:0x%08X\\n", reg); }\n    else if (op==\'T\') { reg ^=  (1u<<feat); printf("REG:0x%08X\\n", reg); }\n    else if (op==\'K\') printf("FEAT:%d\\n", (reg>>feat)&1);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Set lights', stdin: '0 S', expectedOutput: 'REG:0x00000001' }, { name: 'Set AC', stdin: '3 S', expectedOutput: 'REG:0x00000008' }]
+                    },
+
+                    {
+                        id: 'ECU-A9a', topicId: 'VISTEON_C_BASIC', title: 'A9a: GPIO Pin Config Register', difficulty: 'Intermediate', points: 150,
+                        statement: 'Create a bit-field struct for an 8-bit GPIO config register:\nmode:2, speed:2, pull:2, output_type:1, reserved:1.\nRead values for each field, set them, and print the raw uint8_t value in hex.',
+                        acceptance: ['Bit-field struct defined', 'Fields set correctly', 'Raw uint8_t printed in hex'], deliverables: ['main.c'],
+                        inputSpec: 'mode speed pull output_type (all 0-3 or 0-1)', outputSpec: 'GPIO_CRL:0x<hex>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\ntypedef struct {\n    uint8_t mode:2;\n    uint8_t speed:2;\n    uint8_t pull:2;\n    uint8_t output_type:1;\n    uint8_t reserved:1;\n} GPIO_Config;\n\nint main() {\n    GPIO_Config cfg = {0};\n    int m,s,p,o;\n    scanf("%d %d %d %d", &m, &s, &p, &o);\n    cfg.mode=m; cfg.speed=s; cfg.pull=p; cfg.output_type=o;\n    printf("GPIO_CRL:0x%02X\\n", *((uint8_t*)&cfg));\n    return 0;\n}' }],
+                        testCases: [{ name: 'Config', stdin: '1 2 0 1', expectedOutput: 'GPIO_CRL:0x19' }]
+                    },
+
+                    {
+                        id: 'ECU-A9b', topicId: 'VISTEON_C_BASIC', title: 'A9b: 16-bit Status Register', difficulty: 'Intermediate', points: 150,
+                        statement: 'Create a bit-field struct for a 16-bit ECU status register:\nengine_on:1, door_open:1, fault:1, battery_low:1, reserved:12.\nRead 4 values (0 or 1) to set the fields and print the raw uint16_t value in hex.',
+                        acceptance: ['Bit-field struct used', 'All 4 fields set', 'Raw uint16_t printed'], deliverables: ['main.c'],
+                        inputSpec: 'engine_on door_open fault battery_low (0 or 1 each)', outputSpec: 'STATUS:0x<hex>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\ntypedef struct {\n    uint16_t engine_on:1;\n    uint16_t door_open:1;\n    uint16_t fault:1;\n    uint16_t battery_low:1;\n    uint16_t reserved:12;\n} ECU_Status;\n\nint main() {\n    ECU_Status s = {0};\n    int e,d,f,b;\n    scanf("%d %d %d %d", &e, &d, &f, &b);\n    s.engine_on=e; s.door_open=d; s.fault=f; s.battery_low=b;\n    printf("STATUS:0x%04X\\n", *((uint16_t*)&s));\n    return 0;\n}' }],
+                        testCases: [{ name: 'All on', stdin: '1 1 1 1', expectedOutput: 'STATUS:0x000F' }, { name: 'Engine only', stdin: '1 0 0 0', expectedOutput: 'STATUS:0x0001' }]
+                    },
+
+                    {
+                        id: 'ECU-A10a', topicId: 'VISTEON_C_BASIC', title: 'A10a: Sensor Read Dispatcher', difficulty: 'Intermediate', points: 150,
+                        statement: 'Define 3 sensor functions: read_speed(), read_rpm(), read_temp() each returning a fixed simulated value.\nStore them in a function pointer array and call each using the array — no if/else or switch.\nPrint the result of each sensor read.',
+                        acceptance: ['Function pointer array used', 'No if/else or switch', 'All 3 sensors called'], deliverables: ['main.c'],
+                        inputSpec: 'None', outputSpec: 'Speed:80\nRPM:3000\nTemp:90',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint read_speed() { return 80; }\nint read_rpm()   { return 3000; }\nint read_temp()  { return 90; }\n\nint main() {\n    int (*sensors[3])() = { read_speed, read_rpm, read_temp };\n    const char *names[] = { "Speed", "RPM", "Temp" };\n    for (int i = 0; i < 3; i++)\n        printf("%s:%d\\n", names[i], sensors[i]());\n    return 0;\n}' }],
+                        testCases: [{ name: 'Dispatch', stdin: '', expectedOutput: 'Speed:80\nRPM:3000\nTemp:90' }]
+                    },
+
+                    {
+                        id: 'ECU-A10b', topicId: 'VISTEON_C_BASIC', title: 'A10b: Vehicle Mode Handler Table', difficulty: 'Intermediate', points: 150,
+                        statement: 'Implement handlers for 4 vehicle modes: OFF, ACC, ON, FAULT.\nStore them in a function pointer table.\nRead a mode number (0-3) and dispatch using the table — no if/else or switch allowed.',
+                        acceptance: ['Function pointer table used', 'No if/else or switch', 'Correct handler called'], deliverables: ['main.c'],
+                        inputSpec: 'mode (0=OFF, 1=ACC, 2=ON, 3=FAULT)', outputSpec: 'Mode-specific message',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nvoid mode_off()   { printf("System OFF\\n"); }\nvoid mode_acc()   { printf("ACC: Accessories ON\\n"); }\nvoid mode_on()    { printf("Engine Running\\n"); }\nvoid mode_fault() { printf("FAULT: Safe Mode\\n"); }\n\nint main() {\n    void (*handlers[4])() = { mode_off, mode_acc, mode_on, mode_fault };\n    int m; scanf("%d", &m);\n    if (m >= 0 && m < 4) handlers[m]();\n    else printf("FAULT: Safe Mode\\n");\n    return 0;\n}' }],
+                        testCases: [{ name: 'OFF', stdin: '0', expectedOutput: 'System OFF' }, { name: 'ON', stdin: '2', expectedOutput: 'Engine Running' }, { name: 'FAULT', stdin: '3', expectedOutput: 'FAULT: Safe Mode' }]
+                    },
+
+                    {
+                        id: 'ECU-A11a', topicId: 'VISTEON_C_BASIC', title: 'A11a: Stack Depth Analyzer', difficulty: 'Intermediate', points: 150,
+                        statement: 'Write a recursive countdown(int n, int depth) function that prints the current depth at each call.\nRead N from input and call countdown(N, 1).\nPrint: Depth <d>: counting down from <n>',
+                        acceptance: ['Recursive function used', 'Depth tracked', 'Base case handled'], deliverables: ['main.c'],
+                        inputSpec: 'N (1-10)', outputSpec: 'Depth 1: counting down from N ... Depth N: counting down from 1',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nvoid countdown(int n, int depth) {\n    if (n <= 0) return;\n    printf("Depth %d: counting down from %d\\n", depth, n);\n    countdown(n - 1, depth + 1);\n}\n\nint main() {\n    int n; scanf("%d", &n);\n    countdown(n, 1);\n    return 0;\n}' }],
+                        testCases: [{ name: 'N=3', stdin: '3', expectedOutput: 'Depth 1: counting down from 3\nDepth 2: counting down from 2\nDepth 3: counting down from 1' }]
+                    },
+
+                    {
+                        id: 'ECU-A11b', topicId: 'VISTEON_C_BASIC', title: 'A11b: Recursive vs Iterative', difficulty: 'Intermediate', points: 150,
+                        statement: 'Implement factorial both recursively and iteratively.\nRead N from input and print both results.\nOutput: Recursive:<v> Iterative:<v>',
+                        acceptance: ['Both implementations present', 'Results match', 'Correct factorial'], deliverables: ['main.c'],
+                        inputSpec: 'N (0-10)', outputSpec: 'Recursive:<v> Iterative:<v>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nlong recursive_fact(int n) { return n <= 1 ? 1 : n * recursive_fact(n-1); }\nlong iterative_fact(int n) { long r=1; for(int i=2;i<=n;i++) r*=i; return r; }\n\nint main() {\n    int n; scanf("%d", &n);\n    printf("Recursive:%ld Iterative:%ld\\n", recursive_fact(n), iterative_fact(n));\n    return 0;\n}' }],
+                        testCases: [{ name: 'N=5', stdin: '5', expectedOutput: 'Recursive:120 Iterative:120' }, { name: 'N=0', stdin: '0', expectedOutput: 'Recursive:1 Iterative:1' }]
+                    },
+
+                    {
+                        id: 'ECU-A12a', topicId: 'VISTEON_C_BASIC', title: 'A12a: Structured Debug Logger', difficulty: 'Intermediate', points: 150,
+                        statement: 'Implement a logger with 3 levels: INFO=0, WARN=1, ERROR=2.\nRead N events, each with a level (0-2) and message string.\nPrint: [INFO] msg / [WARN] msg / [ERROR] msg',
+                        acceptance: ['All 3 levels handled', 'Correct prefix printed', 'N events processed'], deliverables: ['main.c'],
+                        inputSpec: 'N\nN lines of: level(0-2) message', outputSpec: '[LEVEL] message for each event',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    const char *levels[] = {"INFO","WARN","ERROR"};\n    int n; scanf("%d\\n", &n);\n    for (int i = 0; i < n; i++) {\n        int lvl; char msg[64];\n        scanf("%d %[^\\n]\\n", &lvl, msg);\n        if (lvl < 0 || lvl > 2) lvl = 2;\n        printf("[%s] %s\\n", levels[lvl], msg);\n    }\n    return 0;\n}' }],
+                        testCases: [{ name: 'Log', stdin: '2\n0 Engine started\n2 Overheat detected', expectedOutput: '[INFO] Engine started\n[ERROR] Overheat detected' }]
+                    },
+
+                    {
+                        id: 'ECU-A12b', topicId: 'VISTEON_C_BASIC', title: 'A12b: Config File Reader', difficulty: 'Intermediate', points: 150,
+                        statement: 'Read vehicle configuration: speed_limit, fuel_threshold, and mode (0/1/2) from stdin (simulating a config file).\nValidate: speed_limit 0-300, fuel_threshold 0-100.\nPrint each value or ERROR if invalid.',
+                        acceptance: ['All 3 values read', 'Validation applied', 'Correct output format'], deliverables: ['main.c'],
+                        inputSpec: 'speed_limit fuel_threshold mode', outputSpec: 'SpeedLimit:<v> FuelThreshold:<v> Mode:<v> or ERROR lines',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int sl, ft, mode;\n    scanf("%d %d %d", &sl, &ft, &mode);\n    if (sl < 0 || sl > 300) printf("ERROR: Invalid speed_limit\\n");\n    else printf("SpeedLimit:%d\\n", sl);\n    if (ft < 0 || ft > 100) printf("ERROR: Invalid fuel_threshold\\n");\n    else printf("FuelThreshold:%d\\n", ft);\n    printf("Mode:%d\\n", mode);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Valid', stdin: '120 20 1', expectedOutput: 'SpeedLimit:120\nFuelThreshold:20\nMode:1' }, { name: 'Invalid speed', stdin: '400 20 0', expectedOutput: 'ERROR: Invalid speed_limit' }]
+                    },
+
+                    {
+                        id: 'ECU-A13a', topicId: 'VISTEON_C_BASIC', title: 'A13a: Build Stage Explorer', difficulty: 'Advanced', points: 200,
+                        statement: 'Write a program that simulates the build stages by printing what each stage produces.\nPrint 4 lines describing: Preprocessor output, Compiler output, Assembler output, Linker output.',
+                        acceptance: ['All 4 stages printed', 'Correct stage names'], deliverables: ['main.c'],
+                        inputSpec: 'None', outputSpec: 'Stage 1: Preprocessor -> .i file\nStage 2: Compiler -> .s file\nStage 3: Assembler -> .o file\nStage 4: Linker -> ELF/HEX',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    printf("Stage 1: Preprocessor -> .i file\\n");\n    printf("Stage 2: Compiler -> .s file\\n");\n    printf("Stage 3: Assembler -> .o file\\n");\n    printf("Stage 4: Linker -> ELF/HEX\\n");\n    return 0;\n}' }],
+                        testCases: [{ name: 'Stages', stdin: '', expectedOutput: 'Stage 1: Preprocessor -> .i file\nStage 2: Compiler -> .s file\nStage 3: Assembler -> .o file\nStage 4: Linker -> ELF/HEX' }]
+                    },
+
+                    {
+                        id: 'ECU-A13b', topicId: 'VISTEON_C_BASIC', title: 'A13b: Multi-file Build Explainer', difficulty: 'Advanced', points: 200,
+                        statement: 'Read a filename (without extension) and print what each build output would be named and its purpose.\nOutput 3 lines for .o, .elf, and .hex files.',
+                        acceptance: ['Correct file extensions printed', 'Purpose described for each'], deliverables: ['main.c'],
+                        inputSpec: 'filename (no extension)', outputSpec: '<name>.o: Object file (compiled, unlinked)\n<name>.elf: Executable with debug info\n<name>.hex: Intel HEX for flashing',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    char name[64]; scanf("%s", name);\n    printf("%s.o: Object file (compiled, unlinked)\\n", name);\n    printf("%s.elf: Executable with debug info\\n", name);\n    printf("%s.hex: Intel HEX for flashing\\n", name);\n    return 0;\n}' }],
+                        testCases: [{ name: 'main', stdin: 'main', expectedOutput: 'main.o: Object file (compiled, unlinked)\nmain.elf: Executable with debug info\nmain.hex: Intel HEX for flashing' }]
+                    },
+
+                    {
+                        id: 'ECU-A14a', topicId: 'VISTEON_C_BASIC', title: 'A14a: Memory Section Mapper', difficulty: 'Advanced', points: 200,
+                        statement: 'Declare variables in different memory sections:\n- initialized global (.data)\n- uninitialized global (.bss)\n- local variable (stack)\nPrint the name and value of each. (Heap/malloc optional)',
+                        acceptance: ['Global initialized shown', 'Global uninitialized shown', 'Local shown'], deliverables: ['main.c'],
+                        inputSpec: 'None', outputSpec: '.data: init_global=42\n.bss: uninit_global=0\nstack: local_var=7',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint init_global = 42;   // .data\nint uninit_global;      // .bss (zero-initialized)\n\nint main() {\n    int local_var = 7;  // stack\n    printf(".data: init_global=%d\\n", init_global);\n    printf(".bss: uninit_global=%d\\n", uninit_global);\n    printf("stack: local_var=%d\\n", local_var);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Memory', stdin: '', expectedOutput: '.data: init_global=42\n.bss: uninit_global=0\nstack: local_var=7' }]
+                    },
+
+                    {
+                        id: 'ECU-A14b', topicId: 'VISTEON_C_BASIC', title: 'A14b: Vehicle Status Manager', difficulty: 'Advanced', points: 200,
+                        statement: 'Build a Vehicle Status Manager combining enums, structs, bitwise ops, and function pointers.\nRead speed and fuel. Use enum for state (NORMAL/WARNING/FAULT), struct for data, bitwise for flags, function pointer for state handler.\nPrint state and flags.',
+                        acceptance: ['Enum state used', 'Struct used', 'Bitwise flags', 'Function pointer called'], deliverables: ['main.c'],
+                        inputSpec: 'speed(int) fuel(int)', outputSpec: 'State:<NORMAL/WARNING/FAULT> Flags:0x<hex>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\ntypedef enum { NORMAL=0, WARNING, FAULT } VehicleState;\ntypedef struct { int speed; int fuel; uint8_t flags; VehicleState state; } Vehicle;\n\nvoid handle_normal(Vehicle *v)  { printf("State:NORMAL Flags:0x%02X\\n",  v->flags); }\nvoid handle_warning(Vehicle *v) { printf("State:WARNING Flags:0x%02X\\n", v->flags); }\nvoid handle_fault(Vehicle *v)   { printf("State:FAULT Flags:0x%02X\\n",   v->flags); }\n\nvoid (*handlers[])(Vehicle*) = { handle_normal, handle_warning, handle_fault };\n\nint main() {\n    Vehicle v = {0};\n    scanf("%d %d", &v.speed, &v.fuel);\n    if (v.speed > 120) v.flags |= 0x01;\n    if (v.fuel < 10)   v.flags |= 0x02;\n    v.state = (v.flags == 0) ? NORMAL : (v.flags == 0x03) ? FAULT : WARNING;\n    handlers[v.state](&v);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Normal', stdin: '80 50', expectedOutput: 'State:NORMAL Flags:0x00' }, { name: 'Warning', stdin: '130 50', expectedOutput: 'State:WARNING Flags:0x01' }, { name: 'Fault', stdin: '130 5', expectedOutput: 'State:FAULT Flags:0x03' }]
+                    },
+
+                    {
+                        id: 'ECU-A15a', topicId: 'VISTEON_C_BASIC', title: 'A15a: Mini ECU Simulator', difficulty: 'Advanced', points: 250,
+                        statement: 'Simulate 3 ECU cycles. Each cycle: read speed and fuel, compute state using enum+struct, set bitwise flags, call a function pointer handler.\nPrint cycle number and state for each cycle.',
+                        acceptance: ['3 cycles simulated', 'All concepts integrated', 'State printed per cycle'], deliverables: ['main.c'],
+                        inputSpec: '3 lines of: speed fuel', outputSpec: 'Cycle 1: <state>\nCycle 2: <state>\nCycle 3: <state>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\ntypedef enum { NORMAL=0, WARNING, FAULT } State;\ntypedef struct { int speed; int fuel; uint8_t flags; State state; } ECU;\n\nvoid h_normal(ECU *e)  { printf("NORMAL\\n"); }\nvoid h_warning(ECU *e) { printf("WARNING\\n"); }\nvoid h_fault(ECU *e)   { printf("FAULT\\n"); }\nvoid (*handlers[])(ECU*) = { h_normal, h_warning, h_fault };\n\nint main() {\n    for (int c = 1; c <= 3; c++) {\n        ECU e = {0};\n        scanf("%d %d", &e.speed, &e.fuel);\n        if (e.speed > 120) e.flags |= 0x01;\n        if (e.fuel < 10)   e.flags |= 0x02;\n        e.state = (e.flags==0) ? NORMAL : (e.flags==0x03) ? FAULT : WARNING;\n        printf("Cycle %d: ", c);\n        handlers[e.state](&e);\n    }\n    return 0;\n}' }],
+                        testCases: [{ name: 'Cycles', stdin: '80 50\n130 50\n130 5', expectedOutput: 'Cycle 1: NORMAL\nCycle 2: WARNING\nCycle 3: FAULT' }]
+                    },
+
+                    {
+                        id: 'ECU-A15b', topicId: 'VISTEON_C_BASIC', title: 'A15b: C-to-Embedded Mapping', difficulty: 'Advanced', points: 250,
+                        statement: 'Demonstrate all 5 core C concepts in one program with embedded context:\n1. Pointer (update sensor via pointer)\n2. Struct (vehicle data)\n3. Bit-field (status register)\n4. Function pointer (mode handler)\n5. Static var (call counter)\nRead speed and fuel, print a summary.',
+                        acceptance: ['All 5 concepts present', 'Correct output', 'Embedded comments'], deliverables: ['main.c'],
+                        inputSpec: 'speed(int) fuel(int)', outputSpec: 'Calls:<n> Speed:<v> Fuel:<v> Status:0x<hex> Mode:<msg>',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\n// 2. Struct\ntypedef struct { int speed; int fuel; } Vehicle;\n// 3. Bit-field\ntypedef struct { uint8_t overspeed:1; uint8_t low_fuel:1; uint8_t reserved:6; } StatusReg;\n// 4. Function pointer\nvoid normal_mode()  { printf("NORMAL\\n"); }\nvoid warning_mode() { printf("WARNING\\n"); }\n\nvoid process(Vehicle *v) { // 1. Pointer\n    static int calls = 0; calls++; // 5. Static\n    StatusReg s = {0};\n    if (v->speed > 120) s.overspeed = 1;\n    if (v->fuel < 10)   s.low_fuel  = 1;\n    uint8_t raw = *((uint8_t*)&s);\n    void (*handler)() = (raw == 0) ? normal_mode : warning_mode;\n    printf("Calls:%d Speed:%d Fuel:%d Status:0x%02X Mode:", calls, v->speed, v->fuel, raw);\n    handler();\n}\n\nint main() {\n    Vehicle v; scanf("%d %d", &v.speed, &v.fuel);\n    process(&v);\n    return 0;\n}' }],
+                        testCases: [{ name: 'Normal', stdin: '80 50', expectedOutput: 'Calls:1 Speed:80 Fuel:50 Status:0x00 Mode:NORMAL' }, { name: 'Warning', stdin: '130 5', expectedOutput: 'Calls:1 Speed:130 Fuel:5 Status:0x03 Mode:WARNING' }]
+                    },
+
+
 
                     { id: 'LINUX-16', topicId: 'LINUX_SYS', title: 'Memory-Mapped File', difficulty: 'Advanced', points: 250, statement: 'Use mmap() to map /tmp/vlab_mmap_test.txt into memory. Write "MMAP_HELLO" to the file via the mapping. Then read it back with a second mmap call and print the content.', acceptance: ['mmap/munmap used', 'ftruncate to set size', 'Content matches'], deliverables: ['main.c'], inputSpec: 'None', outputSpec: 'MMAP_HELLO', files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <fcntl.h>\n#include <sys/mman.h>\n#include <unistd.h>\n\n#define FILE_PATH "/tmp/vlab_mmap_test.txt"\n#define DATA "MMAP_HELLO"\n\nint main() {\n    // TODO: open file, ftruncate to strlen(DATA)+1 bytes\n    // TODO: mmap with PROT_WRITE, write DATA into mapping, munmap\n    // TODO: open again, mmap with PROT_READ, printf the content, munmap\n    // Cleanup: unlink(FILE_PATH)\n    return 0;\n}' }], testCases: [{ name: 'MMAP', stdin: '', expectedOutput: 'MMAP_HELLO' }] },
 
