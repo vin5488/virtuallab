@@ -12,6 +12,7 @@
     <!-- No external compiler script needed for Judge0 API -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="/visteon_questions.js?v=202603051625"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <!-- CodeMirror 6 for Syntax Highlighting -->
     <script type="importmap">
@@ -1147,8 +1148,8 @@
                             <div class="flex items-center gap-3">
                                 <!-- Download All Reports -->
                                 <button @click="downloadAllReports()"
-                                    class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs border border-blue-600 transition-all font-black flex items-center gap-2">
-                                    <i class="fas fa-download"></i> Download All Reports
+                                    class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs border border-emerald-600 transition-all font-black flex items-center gap-2">
+                                    <i class="fas fa-file-excel"></i> Export All (.xlsx)
                                 </button>
                                 <!-- Enhanced Search -->
                                 <div class="relative">
@@ -1268,8 +1269,8 @@
                                     x-text="gradingSubmission?.projectTitle"></p>
                             </div>
                             <button @click="downloadCandidateReport({ name: gradingSubmission.candidateName, email: gradingSubmission.email })"
-                                class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs transition-all flex items-center gap-2">
-                                <i class="fas fa-download"></i> Download Report
+                                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs transition-all flex items-center gap-2">
+                                <i class="fas fa-file-excel"></i> Download Excel Report
                             </button>
                         </div>
 
@@ -3909,102 +3910,461 @@
                     }
                 },
 
-                // ── Detailed Report Builder ───────────────────────────────
-                buildCandidateReport(candidate) {
-                    const subs = this.allSubmissions.filter(s =>
-                        s.email === candidate.email
-                    );
-                    let report = '════════════════════════════════════════════════════════\n';
-                    report += '  VISTEON × SKILL-LYNC — CANDIDATE DETAILED REPORT\n';
-                    report += '════════════════════════════════════════════════════════\n\n';
-                    report += `Name    : ${candidate.name}\n`;
-                    report += `Email   : ${candidate.email}\n`;
-                    report += `Generated: ${new Date().toLocaleString()}\n\n`;
+                // ── Excel Report Generator ──────────────────────────────
+                _field(s, camel, snake) {
+                    return s[camel] !== undefined ? s[camel] : s[snake];
+                },
 
-                    report += '──────────────────────────────────────────────────────\n';
-                    report += '  SUMMARY\n';
-                    report += '──────────────────────────────────────────────────────\n';
-                    report += `Total Submissions : ${subs.length}\n`;
-                    report += `Violations        : ${subs.reduce((a,s) => a + (s.violationCount || 0), 0)}\n\n`;
-
-                    report += '──────────────────────────────────────────────────────\n';
-                    report += '  PROBLEM-WISE BREAKDOWN\n';
-                    report += '──────────────────────────────────────────────────────\n';
-
-                    subs.forEach((s, i) => {
-                        report += `\n[${i+1}] ${s.projectTitle || s.projectId}\n`;
-                        report += `    Score       : ${s.autoScore || 0}%\n`;
-                        report += `    Tests       : ${s.testsPassed}/${s.testsTotal} passed\n`;
-                        report += `    Status      : ${s.status}\n`;
-                        report += `    Submitted   : ${new Date(s.submittedAt).toLocaleString()}\n`;
-                        if (s.violationCount > 0) {
-                            report += `    ⚠ Violations: ${s.violationCount}\n`;
-                        }
-                        // Test case pass/fail
-                        if (s.testResults) {
-                            try {
-                                const tr = typeof s.testResults === 'string' ? JSON.parse(s.testResults) : s.testResults;
-                                tr.forEach(t => {
-                                    const icon = t.passed ? '✓' : '✗';
-                                    report += `    ${icon} ${t.name}: ${t.passed ? 'PASS' : 'FAIL'}\n`;
-                                });
-                            } catch {}
-                        }
-                        // Code
-                        if (s.code) {
-                            try {
-                                const code = typeof s.code === 'string' ? JSON.parse(s.code) : s.code;
-                                code.forEach(f => {
-                                    report += `\n    ── ${f.name} ──\n`;
-                                    (f.content || '').split('\n').forEach(line => {
-                                        report += `    ${line}\n`;
-                                    });
-                                });
-                            } catch {}
-                        }
-                    });
-
-                    report += '\n════════════════════════════════════════════════════════\n';
-                    report += '  VIOLATION LOG\n';
-                    report += '════════════════════════════════════════════════════════\n';
-                    const allViolations = subs.flatMap(s => {
-                        try { return typeof s.violationLog === 'string' ? JSON.parse(s.violationLog || '[]') : (s.violationLog || []); }
-                        catch { return []; }
-                    });
-                    if (allViolations.length === 0) {
-                        report += 'No violations recorded.\n';
-                    } else {
-                        allViolations.forEach(v => {
-                            report += `  [${v.time}] ${v.reason} (Problem: ${v.problem || '—'})\n`;
-                        });
+                _buildExcelReport(submissions, title) {
+                    if (typeof XLSX === 'undefined') {
+                        alert('Excel library not loaded. Please refresh the page.');
+                        return;
                     }
-                    report += '\n════════════════════════════════════════════════════════\n';
-                    return report;
+                    const wb = XLSX.utils.book_new();
+                    const f = (s, c, k) => this._field(s, c, k);
+
+                    // ── Collect candidate list ─────────────────────────────
+                    const candidateMap = {};
+                    submissions.forEach(s => {
+                        const email = s.email;
+                        const name = f(s,'candidateName','candidate_name') || email;
+                        if (!candidateMap[email]) candidateMap[email] = { name, email, subs: [] };
+                        candidateMap[email].subs.push(s);
+                    });
+                    const candidates = Object.values(candidateMap);
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 1: Candidate Summary
+                    // ══════════════════════════════════════════════════════
+                    const summaryRows = [[
+                        'Rank', 'Candidate Name', 'Email',
+                        'Problems Submitted', 'Total Tests Passed', 'Total Tests',
+                        'Pass Rate %', 'Avg Score %',
+                        'Total Violations', 'Tab Switches', 'Copy/Paste Attempts',
+                        'Status'
+                    ]];
+
+                    const ranked = candidates.map(c => {
+                        const subs = c.subs;
+                        const totalTests = subs.reduce((a, s) => a + (f(s,'testsTotal','tests_total') || 0), 0);
+                        const passedTests = subs.reduce((a, s) => a + (f(s,'testsPassed','tests_passed') || 0), 0);
+                        const avgScore = subs.length ? Math.round(subs.reduce((a, s) => a + (f(s,'autoScore','auto_score') || 0), 0) / subs.length) : 0;
+                        const totalViolations = subs.reduce((a, s) => a + (f(s,'violationCount','violation_count') || 0), 0);
+
+                        let tabSwitches = 0, copyPaste = 0;
+                        subs.forEach(s => {
+                            const vlog = this._parseViolationLog(f(s,'violationLog','violation_log'));
+                            tabSwitches += vlog.filter(v => v.reason && (v.reason.includes('Tab switch') || v.reason.includes('focus lost'))).length;
+                            copyPaste += vlog.filter(v => v.reason && (v.reason.includes('Copy') || v.reason.includes('Paste') || v.reason.includes('Cut'))).length;
+                        });
+
+                        const passRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+                        return { c, subs, totalTests, passedTests, avgScore, totalViolations, tabSwitches, copyPaste, passRate };
+                    }).sort((a, b) => b.avgScore - a.avgScore);
+
+                    ranked.forEach((r, i) => {
+                        summaryRows.push([
+                            i + 1,
+                            r.c.name,
+                            r.c.email,
+                            r.subs.length,
+                            r.passedTests,
+                            r.totalTests,
+                            r.passRate + '%',
+                            r.avgScore + '%',
+                            r.totalViolations,
+                            r.tabSwitches,
+                            r.copyPaste,
+                            r.totalViolations >= 10 ? '🚨 High Risk' : r.totalViolations >= 3 ? '⚠️ Warning' : '✅ Clean'
+                        ]);
+                    });
+
+                    const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
+                    ws1['!cols'] = [
+                        { wch: 6 }, { wch: 25 }, { wch: 35 }, { wch: 18 }, { wch: 16 },
+                        { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 14 },
+                        { wch: 20 }, { wch: 14 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws1, 'Candidate Summary');
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 2: Problem-wise Breakdown
+                    // ══════════════════════════════════════════════════════
+                    const probRows = [[
+                        'Candidate Name', 'Email', 'Problem ID', 'Problem Title',
+                        'Score %', 'Tests Passed', 'Tests Total', 'Pass Rate %',
+                        'Violations on Problem', 'Submitted At', 'Status'
+                    ]];
+
+                    submissions.forEach(s => {
+                        const vlog = this._parseViolationLog(f(s,'violationLog','violation_log'));
+                        const title_ = f(s,'projectTitle','project_title') || f(s,'projectId','project_id');
+                        const probViolations = vlog.filter(v => v.problem === title_).length;
+                        const totalTests = f(s,'testsTotal','tests_total') || 0;
+                        const passedTests = f(s,'testsPassed','tests_passed') || 0;
+                        const passRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+                        const submittedAt = f(s,'submittedAt','submitted_at');
+                        probRows.push([
+                            f(s,'candidateName','candidate_name') || s.email,
+                            s.email,
+                            f(s,'projectId','project_id') || '—',
+                            title_ || '—',
+                            f(s,'autoScore','auto_score') || 0,
+                            passedTests,
+                            totalTests,
+                            passRate + '%',
+                            probViolations,
+                            submittedAt ? new Date(submittedAt).toLocaleString() : '—',
+                            s.status || '—'
+                        ]);
+                    });
+
+                    const ws2 = XLSX.utils.aoa_to_sheet(probRows);
+                    ws2['!cols'] = [
+                        { wch: 25 }, { wch: 35 }, { wch: 16 }, { wch: 40 },
+                        { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 },
+                        { wch: 20 }, { wch: 22 }, { wch: 12 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws2, 'Problem Breakdown');
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 3: Test Case Details
+                    // ══════════════════════════════════════════════════════
+                    const testRows = [[
+                        'Candidate Name', 'Email', 'Problem Title', 'Test Case Name', 'Result', 'Expected Output', 'Actual Output'
+                    ]];
+
+                    submissions.forEach(s => {
+                        const tests = this._parseJson(f(s,'testResults','test_results'));
+                        const title_ = f(s,'projectTitle','project_title') || f(s,'projectId','project_id');
+                        if (!tests || !tests.length) {
+                            testRows.push([
+                                f(s,'candidateName','candidate_name') || s.email, s.email,
+                                title_, '—', 'No test data', '—', '—'
+                            ]);
+                            return;
+                        }
+                        tests.forEach(t => {
+                            testRows.push([
+                                f(s,'candidateName','candidate_name') || s.email,
+                                s.email,
+                                title_,
+                                t.name || '—',
+                                t.passed ? 'PASS' : 'FAIL',
+                                t.expectedOutput || t.expected || '—',
+                                t.actualOutput || t.output || t.actual || '—'
+                            ]);
+                        });
+                    });
+
+                    const ws3 = XLSX.utils.aoa_to_sheet(testRows);
+                    ws3['!cols'] = [
+                        { wch: 25 }, { wch: 35 }, { wch: 40 }, { wch: 30 },
+                        { wch: 10 }, { wch: 30 }, { wch: 30 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws3, 'Test Case Details');
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 4: Violations Log
+                    // ══════════════════════════════════════════════════════
+                    const violRows = [[
+                        'Candidate Name', 'Email', 'Violation #', 'Timestamp',
+                        'Violation Type', 'Problem / Context', 'Severity'
+                    ]];
+
+                    let hasViolations = false;
+                    submissions.forEach(s => {
+                        const vlog = this._parseViolationLog(f(s,'violationLog','violation_log'));
+                        if (!vlog.length) return;
+                        hasViolations = true;
+                        vlog.forEach((v, i) => {
+                            const reason = v.reason || '—';
+                            let severity = 'Low';
+                            if (reason.includes('Tab switch') || reason.includes('focus lost')) severity = 'Medium';
+                            if (reason.includes('Copy') || reason.includes('Paste') || reason.includes('Cut')) severity = 'High';
+                            if (reason.includes('DevTools')) severity = 'Critical';
+                            violRows.push([
+                                f(s,'candidateName','candidate_name') || s.email,
+                                s.email,
+                                i + 1,
+                                v.time || '—',
+                                reason,
+                                v.problem || f(s,'projectTitle','project_title') || '—',
+                                severity
+                            ]);
+                        });
+                    });
+
+                    if (!hasViolations) {
+                        violRows.push(['No violations recorded', '', '', '', '', '', '']);
+                    }
+
+                    const ws4 = XLSX.utils.aoa_to_sheet(violRows);
+                    ws4['!cols'] = [
+                        { wch: 25 }, { wch: 35 }, { wch: 12 }, { wch: 20 },
+                        { wch: 40 }, { wch: 35 }, { wch: 12 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws4, 'Violations Log');
+
+                    // ── Save file ──────────────────────────────────────────
+                    const date = new Date().toISOString().slice(0, 10);
+                    XLSX.writeFile(wb, `${title}_${date}.xlsx`);
                 },
 
-                downloadCandidateReport(candidate) {
-                    const report = this.buildCandidateReport(candidate);
-                    const blob = new Blob([report], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `report_${candidate.email.replace('@','_')}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                _parseViolationLog(raw) {
+                    try {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []);
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch { return []; }
                 },
 
-                downloadAllReports() {
-                    const unique = [...new Map(this.allSubmissions.map(s => [s.email, { name: s.candidateName, email: s.email }])).values()];
-                    let combined = '';
-                    unique.forEach(c => { combined += this.buildCandidateReport(c) + '\n\n'; });
-                    const blob = new Blob([combined], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `all_candidates_report_${new Date().toISOString().slice(0,10)}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                _parseJson(raw) {
+                    try {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []);
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch { return []; }
+                },
+
+                async downloadCandidateReport(candidate) {
+                    // Fetch full submissions with violation_log for this candidate
+                    let subs = this.allSubmissions.filter(s => s.email === candidate.email);
+                    if (!subs.length) { alert('No submissions found for this candidate.'); return; }
+                    // Enrich each sub with violation_log from full detail endpoint
+                    subs = await Promise.all(subs.map(async s => {
+                        if (s.violationLog || s.violation_log) return s;
+                        try {
+                            const r = await fetch('/api/submission/' + s.id, { headers: this._authHeaders() });
+                            const detail = await r.json();
+                            return { ...s, violation_log: detail.violation_log, test_results: detail.test_results };
+                        } catch { return s; }
+                    }));
+                    this._buildExcelReport(subs, `report_${candidate.email.replace('@', '_')}`);
+                },
+
+                async downloadAllReports() {
+                    if (!this.allSubmissions.length) { alert('No submissions to export.'); return; }
+                    this.successToast = '⏳ Building Excel report…';
+                    // Enrich all submissions with full violation_log
+                    const enriched = await Promise.all(this.allSubmissions.map(async s => {
+                        if (s.violationLog || s.violation_log) return s;
+                        try {
+                            const r = await fetch('/api/submission/' + s.id, { headers: this._authHeaders() });
+                            const detail = await r.json();
+                            return { ...s, violation_log: detail.violation_log, test_results: detail.test_results };
+                        } catch { return s; }
+                    }));
+                    this.successToast = '';
+                    this._buildExcelReport(enriched, 'VisteonVirtualLab_AllCandidates');
+                },
+
+                buildCandidateReport(candidate) {
+                    return `Report for ${candidate.name} (${candidate.email})`;
                 }
+
+                    // ── Helper styles ──────────────────────────────────────
+                    const H = (v) => ({ v, t: 's' });
+
+                    // ── Collect candidate list ─────────────────────────────
+                    const candidateMap = {};
+                    submissions.forEach(s => {
+                        if (!candidateMap[s.email]) {
+                            candidateMap[s.email] = { name: s.candidateName || s.email, email: s.email, subs: [] };
+                        }
+                        candidateMap[s.email].subs.push(s);
+                    });
+                    const candidates = Object.values(candidateMap);
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 1: Candidate Summary
+                    // ══════════════════════════════════════════════════════
+                    const summaryRows = [[
+                        'Rank', 'Candidate Name', 'Email',
+                        'Problems Submitted', 'Total Tests Passed', 'Total Tests',
+                        'Pass Rate %', 'Avg Score %',
+                        'Total Violations', 'Tab Switches', 'Copy/Paste Attempts',
+                        'Time Used (min)', 'Status'
+                    ]];
+
+                    const ranked = candidates.map(c => {
+                        const subs = c.subs;
+                        const totalTests = subs.reduce((a, s) => a + (s.testsTotal || 0), 0);
+                        const passedTests = subs.reduce((a, s) => a + (s.testsPassed || 0), 0);
+                        const avgScore = subs.length ? Math.round(subs.reduce((a, s) => a + (s.autoScore || 0), 0) / subs.length) : 0;
+                        const totalViolations = subs.reduce((a, s) => a + (s.violationCount || 0), 0);
+
+                        let tabSwitches = 0, copyPaste = 0;
+                        subs.forEach(s => {
+                            const vlog = this._parseViolationLog(s.violationLog);
+                            tabSwitches += vlog.filter(v => v.reason && (v.reason.includes('Tab switch') || v.reason.includes('focus lost'))).length;
+                            copyPaste += vlog.filter(v => v.reason && (v.reason.includes('Copy') || v.reason.includes('Paste') || v.reason.includes('Cut'))).length;
+                        });
+
+                        const passRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+                        return { c, subs, totalTests, passedTests, avgScore, totalViolations, tabSwitches, copyPaste, passRate };
+                    }).sort((a, b) => b.avgScore - a.avgScore);
+
+                    ranked.forEach((r, i) => {
+                        const timeUsed = r.subs.reduce((a, s) => a + (s.timeSpent || 0), 0);
+                        summaryRows.push([
+                            i + 1,
+                            r.c.name,
+                            r.c.email,
+                            r.subs.length,
+                            r.passedTests,
+                            r.totalTests,
+                            r.passRate + '%',
+                            r.avgScore + '%',
+                            r.totalViolations,
+                            r.tabSwitches,
+                            r.copyPaste,
+                            timeUsed > 0 ? Math.round(timeUsed / 60) : '—',
+                            r.totalViolations >= 10 ? '🚨 High Risk' : r.totalViolations >= 3 ? '⚠️ Warning' : '✅ Clean'
+                        ]);
+                    });
+
+                    const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
+                    ws1['!cols'] = [
+                        { wch: 6 }, { wch: 25 }, { wch: 35 }, { wch: 18 }, { wch: 16 },
+                        { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 14 },
+                        { wch: 20 }, { wch: 16 }, { wch: 14 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws1, '📋 Candidate Summary');
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 2: Problem-wise Breakdown
+                    // ══════════════════════════════════════════════════════
+                    const probRows = [[
+                        'Candidate Name', 'Email', 'Problem ID', 'Problem Title',
+                        'Score %', 'Tests Passed', 'Tests Total', 'Pass Rate %',
+                        'Violations on Problem', 'Submitted At', 'Status'
+                    ]];
+
+                    submissions.forEach(s => {
+                        const vlog = this._parseViolationLog(s.violationLog);
+                        const probViolations = vlog.filter(v => v.problem === s.projectTitle).length;
+                        const totalTests = s.testsTotal || 0;
+                        const passedTests = s.testsPassed || 0;
+                        const passRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+                        probRows.push([
+                            s.candidateName || s.email,
+                            s.email,
+                            s.projectId,
+                            s.projectTitle || s.projectId,
+                            s.autoScore || 0,
+                            passedTests,
+                            totalTests,
+                            passRate + '%',
+                            probViolations,
+                            s.submittedAt ? new Date(s.submittedAt).toLocaleString() : '—',
+                            s.status || '—'
+                        ]);
+                    });
+
+                    const ws2 = XLSX.utils.aoa_to_sheet(probRows);
+                    ws2['!cols'] = [
+                        { wch: 25 }, { wch: 35 }, { wch: 16 }, { wch: 40 },
+                        { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 },
+                        { wch: 20 }, { wch: 22 }, { wch: 12 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws2, '📊 Problem Breakdown');
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 3: Test Case Details
+                    // ══════════════════════════════════════════════════════
+                    const testRows = [[
+                        'Candidate Name', 'Email', 'Problem Title', 'Test Case Name', 'Result', 'Expected Output', 'Actual Output'
+                    ]];
+
+                    submissions.forEach(s => {
+                        const tests = this._parseJson(s.testResults);
+                        if (!tests || !tests.length) {
+                            testRows.push([
+                                s.candidateName || s.email, s.email,
+                                s.projectTitle || s.projectId,
+                                '—', 'No test data', '—', '—'
+                            ]);
+                            return;
+                        }
+                        tests.forEach(t => {
+                            testRows.push([
+                                s.candidateName || s.email,
+                                s.email,
+                                s.projectTitle || s.projectId,
+                                t.name || '—',
+                                t.passed ? 'PASS ✅' : 'FAIL ❌',
+                                t.expectedOutput || '—',
+                                t.actualOutput || t.output || '—'
+                            ]);
+                        });
+                    });
+
+                    const ws3 = XLSX.utils.aoa_to_sheet(testRows);
+                    ws3['!cols'] = [
+                        { wch: 25 }, { wch: 35 }, { wch: 40 }, { wch: 30 },
+                        { wch: 12 }, { wch: 30 }, { wch: 30 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws3, '🧪 Test Case Details');
+
+                    // ══════════════════════════════════════════════════════
+                    // SHEET 4: Violations Log
+                    // ══════════════════════════════════════════════════════
+                    const violRows = [[
+                        'Candidate Name', 'Email', 'Violation #', 'Timestamp',
+                        'Violation Type', 'Problem / Context', 'Severity'
+                    ]];
+
+                    let hasViolations = false;
+                    submissions.forEach(s => {
+                        const vlog = this._parseViolationLog(s.violationLog);
+                        if (!vlog.length) return;
+                        hasViolations = true;
+                        vlog.forEach((v, i) => {
+                            const reason = v.reason || '—';
+                            let severity = 'Low';
+                            if (reason.includes('Tab switch') || reason.includes('focus lost')) severity = 'Medium';
+                            if (reason.includes('Copy') || reason.includes('Paste') || reason.includes('Cut')) severity = 'High';
+                            if (reason.includes('DevTools')) severity = 'Critical';
+                            violRows.push([
+                                s.candidateName || s.email,
+                                s.email,
+                                i + 1,
+                                v.time || '—',
+                                reason,
+                                v.problem || s.projectTitle || '—',
+                                severity
+                            ]);
+                        });
+                    });
+
+                    if (!hasViolations) {
+                        violRows.push(['No violations recorded', '', '', '', '', '', '']);
+                    }
+
+                    const ws4 = XLSX.utils.aoa_to_sheet(violRows);
+                    ws4['!cols'] = [
+                        { wch: 25 }, { wch: 35 }, { wch: 12 }, { wch: 20 },
+                        { wch: 40 }, { wch: 35 }, { wch: 12 }
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws4, '⚠️ Violations Log');
+
+                    // ── Save file ──────────────────────────────────────────
+                    const date = new Date().toISOString().slice(0, 10);
+                    XLSX.writeFile(wb, `${title}_${date}.xlsx`);
+                },
+
+                _parseViolationLog(raw) {
+                    try {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []);
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch { return []; }
+                },
+
+                _parseJson(raw) {
+                    try {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw || '[]') : (raw || []);
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch { return []; }
+                },
 
             }
         }
