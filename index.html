@@ -14,10 +14,30 @@
     <script src="/visteon_questions.js?v=202603051625"></script>
 
     <!-- CodeMirror 6 for Syntax Highlighting -->
+    <script type="importmap">
+    {
+      "imports": {
+        "codemirror": "https://esm.sh/codemirror@6.0.1",
+        "@codemirror/view": "https://esm.sh/@codemirror/view@6",
+        "@codemirror/state": "https://esm.sh/@codemirror/state@6",
+        "@codemirror/language": "https://esm.sh/@codemirror/language@6",
+        "@codemirror/commands": "https://esm.sh/@codemirror/commands@6",
+        "@codemirror/lang-cpp": "https://esm.sh/@codemirror/lang-cpp@6",
+        "@codemirror/theme-one-dark": "https://esm.sh/@codemirror/theme-one-dark@6",
+        "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6",
+        "@codemirror/lint": "https://esm.sh/@codemirror/lint@6",
+        "@codemirror/search": "https://esm.sh/@codemirror/search@6",
+        "@lezer/common": "https://esm.sh/@lezer/common@1",
+        "@lezer/highlight": "https://esm.sh/@lezer/highlight@1",
+        "@lezer/lr": "https://esm.sh/@lezer/lr@1",
+        "@lezer/cpp": "https://esm.sh/@lezer/cpp@1"
+      }
+    }
+    </script>
     <script type="module">
-        import { EditorView, basicSetup } from "https://cdn.jsdelivr.net/npm/codemirror@6.0.1/dist/index.js"
-        import { cpp } from "https://cdn.jsdelivr.net/npm/@codemirror/lang-cpp@6.0.2/dist/index.js"
-        import { oneDark } from "https://cdn.jsdelivr.net/npm/@codemirror/theme-one-dark@6.1.2/dist/index.js"
+        import { EditorView, basicSetup } from "codemirror"
+        import { cpp } from "@codemirror/lang-cpp"
+        import { oneDark } from "@codemirror/theme-one-dark"
         window.CodeMirrorModules = { EditorView, basicSetup, cpp, oneDark };
     </script>
     <style>
@@ -966,6 +986,11 @@
                             class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
                             Analytics Hub
                         </button>
+                        <button @click="adminTab = 'courses'; loadTopicVisibility()"
+                            :class="adminTab === 'courses' ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40' : 'text-slate-500 hover:text-slate-300'"
+                            class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                            <i class="fas fa-book-open mr-1"></i> Courses
+                        </button>
                     </nav>
                 </div>
             </div>
@@ -1434,6 +1459,65 @@
             </div>
         </div>
 
+    <!-- Tab: Course Visibility Controls -->
+                <div x-show="adminTab === 'courses'" x-transition class="space-y-8">
+                    <div>
+                        <h2 class="text-3xl font-black text-white tracking-tighter">Course <span class="text-violet-500">Visibility</span></h2>
+                        <p class="text-xs text-slate-500 mt-1">Enable or disable courses for all participants on the platform.</p>
+                    </div>
+
+                    <!-- Loading state -->
+                    <div x-show="topicLoadError" class="bg-red-900/30 border border-red-700/40 rounded-2xl p-6 text-red-400 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> Failed to load topics. Make sure the server is running and try again.
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+                        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                            <div class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fas fa-toggle-on text-violet-500"></i> Available Courses
+                            </div>
+                            <div class="text-[10px] text-slate-600" x-text="Object.keys(topicVisibility).length + ' courses total'"></div>
+                        </div>
+                        <div class="divide-y divide-slate-800">
+                            <template x-for="[name, enabled] in Object.entries(topicVisibility)" :key="name">
+                                <div class="flex items-center justify-between px-6 py-4 hover:bg-slate-800/40 transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                            :class="enabled ? 'bg-violet-600/20 text-violet-400' : 'bg-slate-800 text-slate-600'">
+                                            <i class="fas" :class="enabled ? 'fa-book-open' : 'fa-book'"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-white" x-text="name"></div>
+                                            <div class="text-[10px] mt-0.5" :class="enabled ? 'text-emerald-400' : 'text-slate-600'"
+                                                x-text="enabled ? 'Visible to participants' : 'Hidden from participants'"></div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        @click="toggleTopic(name, !enabled)"
+                                        :disabled="topicSaving === name"
+                                        class="relative inline-flex items-center w-12 h-6 rounded-full transition-all duration-300 focus:outline-none disabled:opacity-50"
+                                        :class="enabled ? 'bg-violet-600' : 'bg-slate-700'">
+                                        <span class="inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300"
+                                            :class="enabled ? 'translate-x-6' : 'translate-x-1'"></span>
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="Object.keys(topicVisibility).length === 0">
+                                <div class="text-center py-10 text-slate-600 italic text-xs">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading courses...
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Save status toast (inline) -->
+                    <div x-show="topicSaveMsg" x-transition
+                        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-violet-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span x-text="topicSaveMsg"></span>
+                    </div>
+                </div>
+
     </div>
     </div>
 
@@ -1835,6 +1919,9 @@
 
                 // Admin Dashboard State
                 adminTab: 'overview',
+                topicSaving: null,
+                topicSaveMsg: '',
+                topicLoadError: false,
                 adminSearch: '',
                 adminSubFilter: 'all',
                 adminDayFilter: '',
@@ -3208,6 +3295,39 @@
                     } catch (e) {
                         console.error('Failed to load submissions:', e);
                         this.allSubmissions = [];
+                    }
+                },
+
+                async loadTopicVisibility() {
+                    this.topicLoadError = false;
+                    try {
+                        const res = await fetch('/topics');
+                        if (!res.ok) throw new Error('Server error');
+                        this.topicVisibility = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load topics:', e);
+                        this.topicLoadError = true;
+                    }
+                },
+
+                async toggleTopic(name, newState) {
+                    this.topicSaving = name;
+                    try {
+                        const res = await fetch('/update-topic', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ topic: name, enabled: newState })
+                        });
+                        if (!res.ok) throw new Error('Save failed');
+                        // Update local state immediately for instant UI feedback
+                        this.topicVisibility = { ...this.topicVisibility, [name]: newState };
+                        this.topicSaveMsg = `"${name}" ${newState ? 'enabled' : 'disabled'}`;
+                        setTimeout(() => { this.topicSaveMsg = ''; }, 2500);
+                    } catch (e) {
+                        console.error('Failed to update topic:', e);
+                        alert('Failed to save. Please try again.');
+                    } finally {
+                        this.topicSaving = null;
                     }
                 },
 
