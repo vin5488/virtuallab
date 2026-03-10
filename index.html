@@ -114,6 +114,12 @@
         window.isVisteonUser = function(email) {
             return typeof email === 'string' && email.toLowerCase().endsWith('@visteon.com');
         };
+        // Admin/staff accounts (skill-lync.com) bypass the visteon-only restriction
+        window.isAllowedUser = function(email) {
+            if (typeof email !== 'string') return false;
+            const e = email.toLowerCase();
+            return e.endsWith('@visteon.com') || e.endsWith('@skill-lync.com');
+        };
     </script>
 </head>
 
@@ -2885,7 +2891,7 @@
                 async generateCode() {
                     if (this.authLoading) return;
                     // ── Visteon-only enforcement ──
-                    if (!window.isVisteonUser(this.user.email)) {
+                    if (!window.isAllowedUser(this.user.email)) {
                         alert('Access Restricted: This platform is only available to Visteon employees. Please use your @visteon.com email address.');
                         return;
                     }
