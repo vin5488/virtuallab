@@ -109,6 +109,12 @@
             border-right: 1px solid #1e293b !important;
         }
     </style>
+    <script>
+        // ── Visteon-only access enforcement ──────────────────────
+        window.isVisteonUser = function(email) {
+            return typeof email === 'string' && email.toLowerCase().endsWith('@visteon.com');
+        };
+    </script>
 </head>
 
 <body class="bg-slate-950 text-slate-200 h-screen overflow-hidden" x-data="labApp()">
@@ -378,7 +384,7 @@
                         <div>
                             <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Solved</div>
                             <div class="text-2xl font-black text-white"
-                                x-text="solvedCount + ' / ' + (selectedTopic?.id === 'VISTEON_C' ? 100 : (allowedProjects.length || projects.length))">
+                                x-text="solvedCount + ' / ' + (selectedTopic?.id === 'VISTEON_C' ? 20 : (allowedProjects.length || projects.length))">
                             </div>
                         </div>
                     </div>
@@ -1956,7 +1962,7 @@
                     { id: 'STM32_HAL', name: 'STM32 HAL Programming', icon: 'fas fa-layer-group', difficulty: 'Intermediate', projectCount: 10, desc: 'STM32 HAL API programming — HAL_GPIO, HAL_UART, HAL_TIM, HAL_ADC, I2C, SPI. HAL calls produce observable output for automated testing.' },
                     { id: 'FREERTOS_SIM', name: 'FreeRTOS Simulation', icon: 'fas fa-tasks', difficulty: 'Advanced', projectCount: 10, desc: 'Real FreeRTOS running on the server via its POSIX/Linux port — tasks, queues, semaphores, mutexes, event groups & software timers.' },
                     { id: 'DEBUG_LAB', name: '🔧 Bug Hunt: Debug Lab', icon: 'fas fa-bug text-red-400', difficulty: 'Advanced', projectCount: 10, desc: 'Real-world debugging challenges. Every project gives you broken code + a production incident report — find and fix the root cause. This is what Day 1 at a company actually looks like.' },
-                    { id: 'VISTEON_C', name: 'Visteon C Programming Assignment Questions', icon: 'fas fa-building text-blue-500', difficulty: 'Advanced', projectCount: 100, desc: 'Exclusive intermediate to advanced C programming assignments covering structures, pointers, memory mapping, and more.' },
+                    { id: 'VISTEON_C', name: 'Visteon C Programming Assignment Questions', icon: 'fas fa-building text-blue-500', difficulty: 'Advanced', projectCount: 20, desc: 'Exclusive intermediate to advanced C programming assignments covering structures, pointers, memory mapping, and more.' },
                     { id: 'VISTEON_C_BASIC', name: 'Visteon C Programming: Basic ECU', icon: 'fas fa-car-side text-blue-400', difficulty: 'Basic', projectCount: 10, desc: 'Focus on core ECU control logic using basic C constructs: if-else, switch-case, and while loops. Simulates real vehicle control units.' }
                 ],
 
@@ -2110,6 +2116,272 @@
                         inputSpec: 'Imp(int) Belt(int)', outputSpec: 'Airbag status',
                         files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int i, b;\n    while(scanf("%d %d", &i, &b) == 2) {\n        if(i > 30 || (i > 20 && b == 0)) printf("DEPLOYED\\n");\n        else printf("Normal\\n");\n    }\n    return 0;\n}' }],
                         testCases: [{ name: 'Deploy', stdin: '35 1', expectedOutput: 'DEPLOYED' }]
+                    },
+
+                    // ─── Visteon C Programming Assignment Questions (VISTEON_C) ───
+
+                    // Assignment 1 — Introduction to C & Program Structure
+                    {
+                        id: 'VCA-01', topicId: 'VISTEON_C', title: 'A1-Q1: Vehicle Mode Controller',
+                        difficulty: 'Intermediate', points: 100,
+                        statement: 'Design and implement a Vehicle Mode Controller in C that manages the operating state of a vehicle using an enum and switch-case structure.\n\nThe controller must support:\n  0 → OFF\n  1 → ACC\n  2 → IGNITION_ON\n  3 → FAULT\n  Other → UNKNOWN_MODE\n\nRead mode value from stdin. Print the corresponding system response.',
+                        acceptance: ['enum used', 'switch-case for mode', 'All 4 modes handled', 'UNKNOWN_MODE for invalid'],
+                        deliverables: ['main.c'], inputSpec: 'Mode(int)', outputSpec: 'Mode string',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\ntypedef enum {\n    OFF = 0,\n    ACC,\n    IGNITION_ON,\n    FAULT\n} VehicleMode;\n\nint main() {\n    int m;\n    while (scanf("%d", &m) == 1) {\n        // TODO: switch on m and print mode string\n    }\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'OFF', stdin: '0', expectedOutput: 'OFF' },
+                            { name: 'ACC', stdin: '1', expectedOutput: 'ACC' },
+                            { name: 'IGNITION_ON', stdin: '2', expectedOutput: 'IGNITION_ON' },
+                            { name: 'FAULT', stdin: '3', expectedOutput: 'FAULT' },
+                            { name: 'Unknown', stdin: '9', expectedOutput: 'UNKNOWN_MODE' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-02', topicId: 'VISTEON_C', title: 'A1-Q2: ECU Monitoring System',
+                        difficulty: 'Intermediate', points: 120,
+                        statement: 'Simulate a basic ECU monitoring system. Read: Speed (km/h), Engine Temperature (°C), Gear Position.\n\nSpeed check:\n  > 120 → "Warning: Overspeed"\n  else  → "Speed Normal"\n\nTemperature check:\n  > 110 → "Critical Overheat"\n  > 95  → "High Temperature"\n  else  → "Temperature Normal"\n\nGear (switch):\n  0 → "Neutral", 1 → "First Gear", 2 → "Second Gear"\n  3 → "Third Gear", 4 → "Fourth Gear", 5 → "Fifth Gear"\n  else → "Invalid Gear"\n\nRun inside while(1) loop, exit when scanf fails.',
+                        acceptance: ['All speed/temp/gear checks', 'switch for gear', 'while(1) loop'],
+                        deliverables: ['main.c'], inputSpec: 'Speed(int) Temp(int) Gear(int)', outputSpec: 'Speed status\nTemp status\nGear status',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int s, t, g;\n    while (scanf("%d %d %d", &s, &t, &g) == 3) {\n        // TODO: Speed check\n        // TODO: Temp check\n        // TODO: Gear switch\n    }\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Normal', stdin: '100 80 3', expectedOutput: 'Speed Normal\nTemperature Normal\nThird Gear' },
+                            { name: 'Warning', stdin: '130 98 2', expectedOutput: 'Warning: Overspeed\nHigh Temperature\nSecond Gear' },
+                            { name: 'Critical', stdin: '150 115 6', expectedOutput: 'Warning: Overspeed\nCritical Overheat\nInvalid Gear' }
+                        ]
+                    },
+
+                    // Assignment 2 — Data Types & Storage Classes
+                    {
+                        id: 'VCA-03', topicId: 'VISTEON_C', title: 'A2-Q1: Storage Class Demonstrator',
+                        difficulty: 'Intermediate', points: 110,
+                        statement: 'Create a program demonstrating differences between auto, static, and extern variables across function calls.\n\nImplement a function counter() that:\n  - Has a static int that persists across calls\n  - Has an auto int that resets each call\n  - Prints both values each call\n\nCall counter() 3 times from main().\n\nExpected output per call:\n  Call N: auto=1 static=N',
+                        acceptance: ['static variable persists', 'auto resets each call', 'extern demonstrated', '3 calls shown'],
+                        deliverables: ['main.c'], inputSpec: 'None', outputSpec: 'Call 1: auto=1 static=1\nCall 2: auto=1 static=2\nCall 3: auto=1 static=3',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nvoid counter() {\n    // TODO: auto int (resets) and static int (persists)\n    // print: "Call N: auto=X static=Y"\n}\n\nint main() {\n    counter();\n    counter();\n    counter();\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Static persists', stdin: '', expectedOutput: 'Call 1: auto=1 static=1\nCall 2: auto=1 static=2\nCall 3: auto=1 static=3' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-04', topicId: 'VISTEON_C', title: 'A2-Q2: Expression Statements Demo',
+                        difficulty: 'Basic', points: 80,
+                        statement: 'Develop a C program that demonstrates different statement types:\n  - Declaration statements\n  - Assignment statements\n  - Expression statements\n\nThe program must:\n  1. Declare two integers (a, b) and one float (c)\n  2. Assign: a=15, b=4, c=2.5\n  3. Compute and print: sum = a + b, product = a * b, result = a * c\n\nExpected output:\nSum: 19\nProduct: 60\nResult: 37.50',
+                        acceptance: ['Declaration, assignment, expression statements', 'Correct arithmetic', 'Correct output format'],
+                        deliverables: ['main.c'], inputSpec: 'None', outputSpec: 'Sum: 19\nProduct: 60\nResult: 37.50',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    // TODO: declare int a, b and float c\n    // TODO: assign values\n    // TODO: compute and print sum, product, result\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Expressions', stdin: '', expectedOutput: 'Sum: 19\nProduct: 60\nResult: 37.50' }
+                        ]
+                    },
+
+                    // Assignment 3 — Functions & Pointers
+                    {
+                        id: 'VCA-05', topicId: 'VISTEON_C', title: 'A3-Q1: Speed Update via Pointer',
+                        difficulty: 'Intermediate', points: 120,
+                        statement: 'Write a function update_speed(int *speed, int new_speed) that:\n  - Updates the speed variable through a pointer\n  - Returns 0 (success) if 0 <= new_speed <= 250\n  - Returns -1 (failure) if new_speed is out of range\n\nIn main(), read two speeds. Call update_speed for each. Print updated value or "Invalid Speed" based on return code.',
+                        acceptance: ['Pointer argument used', 'Return code 0/-1', 'Range validation', 'Correct output'],
+                        deliverables: ['main.c'], inputSpec: 'Speed1(int) Speed2(int)', outputSpec: 'Updated speed or "Invalid Speed" per line',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint update_speed(int *speed, int new_speed) {\n    // TODO: validate range 0-250, update via pointer, return 0 or -1\n    return 0;\n}\n\nint main() {\n    int s, v;\n    while (scanf("%d", &v) == 1) {\n        int ret = update_speed(&s, v);\n        if (ret == 0) printf("Speed: %d\\n", s);\n        else printf("Invalid Speed\\n");\n    }\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Valid', stdin: '100', expectedOutput: 'Speed: 100' },
+                            { name: 'Invalid', stdin: '300', expectedOutput: 'Invalid Speed' },
+                            { name: 'Zero', stdin: '0', expectedOutput: 'Speed: 0' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-06', topicId: 'VISTEON_C', title: 'A3-Q2: Fault Flag Manager',
+                        difficulty: 'Intermediate', points: 130,
+                        statement: 'In embedded systems, faults are tracked using bit flags.\n\nImplement:\n  void set_fault(int *flags, int bit)   — sets bit in flags\n  void clear_fault(int *flags, int bit) — clears bit in flags\n\nFault bit map:\n  Bit 0 → OverSpeed\n  Bit 1 → OverTemperature\n  Bit 2 → SensorFailure\n\nRead N operations of the form:\n  SET <bit>   → set that bit\n  CLR <bit>   → clear that bit\n\nAfter all operations, print: "FaultRegister: 0x<hex>"',
+                        acceptance: ['Pointer access to flags', 'set_fault uses |= with bit shift', 'clear_fault uses &= ~', 'Correct hex output'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN lines of: SET/CLR bit', outputSpec: 'FaultRegister: 0xXX',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nvoid set_fault(int *flags, int bit) {\n    // TODO: set bit using pointer\n}\n\nvoid clear_fault(int *flags, int bit) {\n    // TODO: clear bit using pointer\n}\n\nint main() {\n    int flags = 0, n, bit;\n    char op[4];\n    scanf("%d", &n);\n    while (n--) {\n        scanf("%s %d", op, &bit);\n        if (op[0] == \'S\') set_fault(&flags, bit);\n        else clear_fault(&flags, bit);\n    }\n    printf("FaultRegister: 0x%02X\\n", flags);\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Set all', stdin: '3\nSET 0\nSET 1\nSET 2', expectedOutput: 'FaultRegister: 0x07' },
+                            { name: 'Set then clear', stdin: '2\nSET 0\nCLR 0', expectedOutput: 'FaultRegister: 0x00' },
+                            { name: 'Partial', stdin: '2\nSET 0\nSET 2', expectedOutput: 'FaultRegister: 0x05' }
+                        ]
+                    },
+
+                    // Assignment 4 — Arrays & Strings
+                    {
+                        id: 'VCA-07', topicId: 'VISTEON_C', title: 'A4-Q1: Sensor Data Array',
+                        difficulty: 'Intermediate', points: 110,
+                        statement: 'Read N integer sensor readings into an array. Compute and print:\n  Min, Max, and Average (2 decimal places).\n\nExample:\nInput: 5\n       34 67 22 89 45\nOutput:\nMin: 22\nMax: 89\nAvg: 51.40',
+                        acceptance: ['Array used', 'Correct min/max/avg', 'Correct format'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN integers', outputSpec: 'Min: X\nMax: X\nAvg: X.XX',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int n;\n    scanf("%d", &n);\n    int arr[100];\n    for (int i = 0; i < n; i++) scanf("%d", &arr[i]);\n    // TODO: find min, max, avg and print\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Basic', stdin: '5\n34 67 22 89 45', expectedOutput: 'Min: 22\nMax: 89\nAvg: 51.40' },
+                            { name: 'Single', stdin: '1\n10', expectedOutput: 'Min: 10\nMax: 10\nAvg: 10.00' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-08', topicId: 'VISTEON_C', title: 'A4-Q2: DTC Code Parser',
+                        difficulty: 'Intermediate', points: 120,
+                        statement: 'Read a DTC (Diagnostic Trouble Code) string of exactly 5 characters (e.g. "P0301").\n\nParse and print:\n  System: P=Powertrain, C=Chassis, B=Body, U=Network\n  Type:   digit[1] (0=Generic, 1=Manufacturer)\n  Code:   last 3 digits\n\nExample:\nInput: P0301\nOutput:\nSystem: Powertrain\nType: Generic\nCode: 301',
+                        acceptance: ['String/char array', 'First char parsed for system', 'Digit extraction', 'Correct output'],
+                        deliverables: ['main.c'], inputSpec: 'DTC string (5 chars)', outputSpec: 'System: X\nType: X\nCode: XXX',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    char dtc[6];\n    scanf("%5s", dtc);\n    // TODO: parse dtc[0] for system, dtc[1] for type, dtc[2..4] for code\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Powertrain Generic', stdin: 'P0301', expectedOutput: 'System: Powertrain\nType: Generic\nCode: 301' },
+                            { name: 'Chassis Mfr', stdin: 'C1234', expectedOutput: 'System: Chassis\nType: Manufacturer\nCode: 234' },
+                            { name: 'Body', stdin: 'B0512', expectedOutput: 'System: Body\nType: Generic\nCode: 512' }
+                        ]
+                    },
+
+                    // Assignment 5 — Structures & Unions
+                    {
+                        id: 'VCA-09', topicId: 'VISTEON_C', title: 'A5-Q1: Vehicle Struct',
+                        difficulty: 'Intermediate', points: 120,
+                        statement: 'Define a struct Vehicle with fields:\n  char model[20], int year, float mileage, int is_electric\n\nRead N vehicles. Print details and flag electric ones.\n\nOutput per vehicle:\n  Model: <model>, Year: <year>, Mileage: <mileage>.XX km [ELECTRIC] or [FUEL]',
+                        acceptance: ['struct used', 'All fields read', 'ELECTRIC/FUEL flag', 'Correct format'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN lines: model year mileage is_electric', outputSpec: 'One line per vehicle',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\ntypedef struct {\n    char model[20];\n    int year;\n    float mileage;\n    int is_electric;\n} Vehicle;\n\nint main() {\n    int n;\n    scanf("%d", &n);\n    Vehicle v[10];\n    for (int i = 0; i < n; i++) {\n        scanf("%s %d %f %d", v[i].model, &v[i].year, &v[i].mileage, &v[i].is_electric);\n    }\n    // TODO: print each vehicle\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Electric', stdin: '1\nTesla 2023 15000.00 1', expectedOutput: 'Model: Tesla, Year: 2023, Mileage: 15000.00 km [ELECTRIC]' },
+                            { name: 'Fuel', stdin: '1\nFord 2020 45000.00 0', expectedOutput: 'Model: Ford, Year: 2020, Mileage: 45000.00 km [FUEL]' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-10', topicId: 'VISTEON_C', title: 'A5-Q2: CAN Frame Union',
+                        difficulty: 'Advanced', points: 150,
+                        statement: 'In CAN bus, a 4-byte data frame can be viewed as individual bytes or as a 32-bit word.\n\nDefine a union CANFrame:\n  uint32_t raw\n  uint8_t  bytes[4]\n\nRead a 32-bit hex value (e.g. 0xDEADBEEF). Store in raw. Print each byte separately:\n  Byte0: 0xEF\n  Byte1: 0xBE\n  Byte2: 0xAD\n  Byte3: 0xDE\n(little-endian order)',
+                        acceptance: ['union used', 'uint32_t raw + uint8_t bytes[4]', 'Correct little-endian output'],
+                        deliverables: ['main.c'], inputSpec: 'Hex value (e.g. DEADBEEF)', outputSpec: 'Byte0..Byte3 in hex',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\ntypedef union {\n    uint32_t raw;\n    uint8_t  bytes[4];\n} CANFrame;\n\nint main() {\n    CANFrame f;\n    scanf("%X", &f.raw);\n    // TODO: print bytes[0..3]\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'DEADBEEF', stdin: 'DEADBEEF', expectedOutput: 'Byte0: 0xEF\nByte1: 0xBE\nByte2: 0xAD\nByte3: 0xDE' },
+                            { name: 'CAFEBABE', stdin: 'CAFEBABE', expectedOutput: 'Byte0: 0xBE\nByte1: 0xBA\nByte2: 0xFE\nByte3: 0xCA' }
+                        ]
+                    },
+
+                    // Assignment 6 — Memory Management
+                    {
+                        id: 'VCA-11', topicId: 'VISTEON_C', title: 'A6-Q1: Dynamic Sensor Buffer',
+                        difficulty: 'Advanced', points: 140,
+                        statement: 'Dynamically allocate an array of N integers using malloc().\nRead N values. Compute sum and average. Free the memory.\n\nOutput:\nSum: <sum>\nAvg: <avg>.XX\nMemory freed.',
+                        acceptance: ['malloc used', 'free called', 'Correct sum/avg', '"Memory freed." printed'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN integers', outputSpec: 'Sum: X\nAvg: X.XX\nMemory freed.',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdlib.h>\n\nint main() {\n    int n;\n    scanf("%d", &n);\n    int *buf = (int*)malloc(n * sizeof(int));\n    // TODO: read values, compute sum/avg, free, print\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Basic', stdin: '4\n10 20 30 40', expectedOutput: 'Sum: 100\nAvg: 25.00\nMemory freed.' },
+                            { name: 'Single', stdin: '1\n7', expectedOutput: 'Sum: 7\nAvg: 7.00\nMemory freed.' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-12', topicId: 'VISTEON_C', title: 'A6-Q2: Linked List ECU Log',
+                        difficulty: 'Advanced', points: 160,
+                        statement: 'Implement a singly linked list to store ECU event logs.\nEach node: int event_id, char message[30], next pointer.\n\nRead N events then print all in insertion order.\nFree all nodes at the end.\n\nOutput per node:\nEvent <id>: <message>',
+                        acceptance: ['struct with next pointer', 'malloc per node', 'Traversal prints correctly', 'All nodes freed'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN lines: id message', outputSpec: 'N lines: Event X: message',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\ntypedef struct Node {\n    int event_id;\n    char message[30];\n    struct Node *next;\n} Node;\n\nint main() {\n    int n;\n    scanf("%d", &n);\n    Node *head = NULL, *tail = NULL;\n    for (int i = 0; i < n; i++) {\n        Node *node = (Node*)malloc(sizeof(Node));\n        scanf("%d %s", &node->event_id, node->message);\n        node->next = NULL;\n        // TODO: append to list\n    }\n    // TODO: traverse and print, then free all\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Two events', stdin: '2\n101 OverSpeed\n202 SensorFail', expectedOutput: 'Event 101: OverSpeed\nEvent 202: SensorFail' }
+                        ]
+                    },
+
+                    // Assignment 7 — File I/O
+                    {
+                        id: 'VCA-13', topicId: 'VISTEON_C', title: 'A7-Q1: ECU Log Writer',
+                        difficulty: 'Advanced', points: 130,
+                        statement: 'Write N log entries to a file "ecu_log.txt", then read them back and print.\n\nEach entry format: "LOG[N]: <message>"\n\nAfter writing and reading back, print each line as-is.\nFinally print: "Log complete."',
+                        acceptance: ['fopen/fclose used', 'fprintf to file', 'fgets to read back', '"Log complete." at end'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN message strings', outputSpec: 'N log lines then "Log complete."',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int n; char msg[50];\n    scanf("%d", &n);\n    FILE *f = fopen("ecu_log.txt", "w");\n    for (int i = 1; i <= n; i++) {\n        scanf("%s", msg);\n        fprintf(f, "LOG[%d]: %s\\n", i, msg);\n    }\n    fclose(f);\n    // TODO: reopen for read, fgets each line and print\n    printf("Log complete.\\n");\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Two logs', stdin: '2\nStart Stop', expectedOutput: 'LOG[1]: Start\nLOG[2]: Stop\nLog complete.' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-14', topicId: 'VISTEON_C', title: 'A7-Q2: Config File Parser',
+                        difficulty: 'Advanced', points: 140,
+                        statement: 'Parse a config-style input of KEY=VALUE pairs (N lines). Store them and look up values by key.\n\nAfter reading N pairs, read M query keys. For each, print the value or "NOT_FOUND".',
+                        acceptance: ['String split on "="', 'Key lookup', '"NOT_FOUND" for missing', 'Correct output'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN lines: KEY=VALUE\nM\nM keys', outputSpec: 'Value or NOT_FOUND per query',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <string.h>\n\nint main() {\n    int n, m;\n    char keys[20][32], vals[20][32], line[64], qkey[32];\n    scanf("%d", &n);\n    for (int i = 0; i < n; i++) {\n        scanf("%s", line);\n        char *eq = strchr(line, \'=\');\n        // TODO: split on \'=\' into keys[i] and vals[i]\n    }\n    scanf("%d", &m);\n    while (m--) {\n        scanf("%s", qkey);\n        // TODO: find and print value or NOT_FOUND\n    }\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Found', stdin: '2\nSPEED=120\nTEMP=95\n1\nSPEED', expectedOutput: '120' },
+                            { name: 'Not found', stdin: '1\nSPEED=100\n1\nFUEL', expectedOutput: 'NOT_FOUND' }
+                        ]
+                    },
+
+                    // Assignment 8 — Bitwise Operations
+                    {
+                        id: 'VCA-15', topicId: 'VISTEON_C', title: 'A8-Q1: Register Bit Manipulator',
+                        difficulty: 'Advanced', points: 140,
+                        statement: 'Simulate MCU register bit operations on an 8-bit register (uint8_t).\n\nStarting value: 0x00\nRead N operations:\n  SET <bit>    → set bit (0-7)\n  CLR <bit>    → clear bit\n  TOG <bit>    → toggle bit\n  GET <bit>    → print bit value (0 or 1)\n\nPrint register state as "REG: 0xXX" at the end.',
+                        acceptance: ['All 4 operations', 'Bitwise operators', 'GET prints 0/1', 'Final REG output'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN operations', outputSpec: 'GET outputs then "REG: 0xXX"',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n#include <string.h>\n\nint main() {\n    uint8_t reg = 0x00;\n    int n, bit;\n    char op[4];\n    scanf("%d", &n);\n    while (n--) {\n        scanf("%s %d", op, &bit);\n        if (!strcmp(op,"SET"))      reg |=  (1 << bit);\n        else if (!strcmp(op,"CLR")) reg &= ~(1 << bit);\n        else if (!strcmp(op,"TOG")) reg ^=  (1 << bit);\n        else if (!strcmp(op,"GET")) printf("%d\\n", (reg >> bit) & 1);\n    }\n    printf("REG: 0x%02X\\n", reg);\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Set and get', stdin: '3\nSET 0\nSET 3\nGET 0', expectedOutput: '1\nREG: 0x09' },
+                            { name: 'Toggle', stdin: '3\nSET 1\nTOG 1\nGET 1', expectedOutput: '0\nREG: 0x00' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-16', topicId: 'VISTEON_C', title: 'A8-Q2: CAN ID Bit Extractor',
+                        difficulty: 'Advanced', points: 150,
+                        statement: 'A CAN 2.0B extended frame ID is 29 bits. Given a 32-bit hex value, extract:\n  Priority  : bits 28-26 (3 bits)\n  Reserved  : bit 25 (1 bit)\n  Data Page : bit 24 (1 bit)\n  PF        : bits 23-16 (8 bits)\n  PS        : bits 15-8  (8 bits)\n  SA        : bits 7-0   (8 bits)\n\nPrint each field in decimal.',
+                        acceptance: ['Correct bit masks', 'Correct shifts', 'All 6 fields printed'],
+                        deliverables: ['main.c'], inputSpec: 'Hex ID (32-bit)', outputSpec: 'Priority: X\nReserved: X\nDataPage: X\nPF: X\nPS: X\nSA: X',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdint.h>\n\nint main() {\n    uint32_t id;\n    scanf("%X", &id);\n    // TODO: extract each field using masks and shifts\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Basic', stdin: '18FEF100', expectedOutput: 'Priority: 6\nReserved: 0\nDataPage: 0\nPF: 254\nPS: 241\nSA: 0' }
+                        ]
+                    },
+
+                    // Assignment 9 — Preprocessor & Macros
+                    {
+                        id: 'VCA-17', topicId: 'VISTEON_C', title: 'A9-Q1: ECU Safety Macros',
+                        difficulty: 'Intermediate', points: 110,
+                        statement: 'Define macros for ECU safety thresholds and operations:\n  #define MAX_SPEED    120\n  #define MAX_TEMP     110\n  #define IS_OVERSPEED(s)  ((s) > MAX_SPEED)\n  #define IS_OVERHEAT(t)   ((t) > MAX_TEMP)\n  #define CLAMP(x,lo,hi)   ((x)<(lo)?(lo):((x)>(hi)?(hi):(x)))\n\nRead speed and temp. Print warnings using macros. Then clamp speed to 0-120 and print "Clamped: <val>".',
+                        acceptance: ['All macros defined', 'IS_OVERSPEED/IS_OVERHEAT used', 'CLAMP applied', 'Correct output'],
+                        deliverables: ['main.c'], inputSpec: 'Speed(int) Temp(int)', outputSpec: 'Warnings then "Clamped: X"',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\n// TODO: define MAX_SPEED, MAX_TEMP, IS_OVERSPEED, IS_OVERHEAT, CLAMP\n\nint main() {\n    int s, t;\n    scanf("%d %d", &s, &t);\n    if (IS_OVERSPEED(s)) printf("Warning: Overspeed\\n");\n    if (IS_OVERHEAT(t))  printf("Warning: Overheat\\n");\n    printf("Clamped: %d\\n", CLAMP(s, 0, 120));\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Both warnings', stdin: '150 115', expectedOutput: 'Warning: Overspeed\nWarning: Overheat\nClamped: 120' },
+                            { name: 'Normal', stdin: '80 90', expectedOutput: 'Clamped: 80' },
+                            { name: 'Negative clamp', stdin: '-10 50', expectedOutput: 'Clamped: 0' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-18', topicId: 'VISTEON_C', title: 'A9-Q2: Conditional Compilation',
+                        difficulty: 'Intermediate', points: 100,
+                        statement: 'Use conditional compilation to select between DEBUG and RELEASE build behaviour.\n\nIf DEBUG is defined:\n  Print "DEBUG: Speed=<s> Temp=<t>"\n  Then normal processing\nIf not DEBUG (RELEASE):\n  Only print results, no debug info\n\nFor this exercise, define DEBUG via #define in your code.\n\nRead Speed and Temp. Print the debug line then:\n  Speed status and Temp status (same logic as A1-Q2).',
+                        acceptance: ['#define DEBUG', '#ifdef DEBUG used', 'Correct conditional output'],
+                        deliverables: ['main.c'], inputSpec: 'Speed(int) Temp(int)', outputSpec: 'DEBUG line + status lines',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\n#define DEBUG\n\nint main() {\n    int s, t;\n    scanf("%d %d", &s, &t);\n    #ifdef DEBUG\n    printf("DEBUG: Speed=%d Temp=%d\\n", s, t);\n    #endif\n    // TODO: print speed and temp status\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Debug mode', stdin: '100 80', expectedOutput: 'DEBUG: Speed=100 Temp=80\nSpeed Normal\nTemperature Normal' },
+                            { name: 'Warning', stdin: '130 112', expectedOutput: 'DEBUG: Speed=130 Temp=112\nWarning: Overspeed\nCritical Overheat' }
+                        ]
+                    },
+
+                    // Assignment 10 — Interrupt & Timer Simulation
+                    {
+                        id: 'VCA-19', topicId: 'VISTEON_C', title: 'A10-Q1: Watchdog Timer Simulation',
+                        difficulty: 'Advanced', points: 150,
+                        statement: 'Simulate a software Watchdog Timer.\n\nLogic:\n  - WDT timeout = 5 ticks\n  - Read N events: "KICK" resets the counter, "TICK" increments it\n  - If counter reaches 5 without a KICK → print "WDT RESET" and stop\n  - If all events processed without timeout → print "System OK"\n\nPrint counter value after each event: "Tick: <count>"',
+                        acceptance: ['Counter resets on KICK', 'Increments on TICK', 'WDT RESET at 5', '"System OK" if no timeout'],
+                        deliverables: ['main.c'], inputSpec: 'N\nN events (TICK/KICK)', outputSpec: 'Tick lines then WDT RESET or System OK',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <string.h>\n\n#define WDT_TIMEOUT 5\n\nint main() {\n    int n, counter = 0;\n    char evt[5];\n    scanf("%d", &n);\n    for (int i = 0; i < n; i++) {\n        scanf("%s", evt);\n        if (!strcmp(evt, "KICK")) counter = 0;\n        else counter++;\n        printf("Tick: %d\\n", counter);\n        if (counter >= WDT_TIMEOUT) {\n            printf("WDT RESET\\n");\n            return 0;\n        }\n    }\n    printf("System OK\\n");\n    return 0;\n}' }],
+                        testCases: [
+                            { name: 'Timeout', stdin: '6\nTICK\nTICK\nTICK\nTICK\nTICK\nTICK', expectedOutput: 'Tick: 1\nTick: 2\nTick: 3\nTick: 4\nTick: 5\nWDT RESET' },
+                            { name: 'Kick saves', stdin: '4\nTICK\nTICK\nKICK\nTICK', expectedOutput: 'Tick: 1\nTick: 2\nTick: 0\nTick: 1\nSystem OK' }
+                        ]
+                    },
+                    {
+                        id: 'VCA-20', topicId: 'VISTEON_C', title: 'A10-Q2: PWM Duty Cycle Calculator',
+                        difficulty: 'Advanced', points: 150,
+                        statement: 'Simulate PWM signal parameters for motor control.\n\nGiven:\n  Frequency (Hz) and Duty Cycle (%)\n\nCalculate and print:\n  Period    = 1,000,000 / freq  (microseconds)\n  ON Time   = Period * duty / 100\n  OFF Time  = Period - ON Time\n\nAll values printed as integers (round down).\n\nExample:\nInput: 1000 75\nOutput:\nPeriod: 1000 us\nON: 750 us\nOFF: 250 us',
+                        acceptance: ['Correct period formula', 'Correct ON/OFF times', 'Integer arithmetic', 'Correct format'],
+                        deliverables: ['main.c'], inputSpec: 'Freq(int) Duty(int)', outputSpec: 'Period: X us\nON: X us\nOFF: X us',
+                        files: [{ name: 'main.c', content: '#include <stdio.h>\n\nint main() {\n    int freq, duty;\n    scanf("%d %d", &freq, &duty);\n    // TODO: compute period, on_time, off_time\n    return 0;\n}' }],
+                        testCases: [
+                            { name: '1kHz 75%', stdin: '1000 75', expectedOutput: 'Period: 1000 us\nON: 750 us\nOFF: 250 us' },
+                            { name: '500Hz 50%', stdin: '500 50', expectedOutput: 'Period: 2000 us\nON: 1000 us\nOFF: 1000 us' },
+                            { name: '2kHz 25%', stdin: '2000 25', expectedOutput: 'Period: 500 us\nON: 125 us\nOFF: 375 us' }
+                        ]
                     },
 
                     { id: 'LINUX-16', topicId: 'LINUX_SYS', title: 'Memory-Mapped File', difficulty: 'Advanced', points: 250, statement: 'Use mmap() to map /tmp/vlab_mmap_test.txt into memory. Write "MMAP_HELLO" to the file via the mapping. Then read it back with a second mmap call and print the content.', acceptance: ['mmap/munmap used', 'ftruncate to set size', 'Content matches'], deliverables: ['main.c'], inputSpec: 'None', outputSpec: 'MMAP_HELLO', files: [{ name: 'main.c', content: '#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <fcntl.h>\n#include <sys/mman.h>\n#include <unistd.h>\n\n#define FILE_PATH "/tmp/vlab_mmap_test.txt"\n#define DATA "MMAP_HELLO"\n\nint main() {\n    // TODO: open file, ftruncate to strlen(DATA)+1 bytes\n    // TODO: mmap with PROT_WRITE, write DATA into mapping, munmap\n    // TODO: open again, mmap with PROT_READ, printf the content, munmap\n    // Cleanup: unlink(FILE_PATH)\n    return 0;\n}' }], testCases: [{ name: 'MMAP', stdin: '', expectedOutput: 'MMAP_HELLO' }] },
@@ -2612,6 +2884,11 @@
 
                 async generateCode() {
                     if (this.authLoading) return;
+                    // ── Visteon-only enforcement ──
+                    if (!window.isVisteonUser(this.user.email)) {
+                        alert('Access Restricted: This platform is only available to Visteon employees. Please use your @visteon.com email address.');
+                        return;
+                    }
                     this.authLoading = true;
                     try {
                         const r = await fetch('/api/auth/register', {
@@ -2819,7 +3096,7 @@
                 },
 
                 get solvedCount() { return this.solvedProjectIds.length; },
-                get totalProgress() { return Math.round((this.solvedCount / (this.selectedTopic?.id === 'VISTEON_C' ? 21 : (this.allowedProjects.length || this.projects.length))) * 100) || 0; },
+                get totalProgress() { return Math.round((this.solvedCount / (this.selectedTopic?.id === 'VISTEON_C' ? 20 : (this.allowedProjects.length || this.projects.length))) * 100) || 0; },
                 get totalPointsEarned() {
                     return this.projects.filter(p => this.solvedProjectIds.includes(p.id))
                         .reduce((sum, p) => sum + p.points, 0);
