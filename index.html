@@ -524,6 +524,17 @@
                         <!-- Spacer to push buttons to right -->
                         <div class="flex-1"></div>
 
+                        <!-- Problem Timer (candidates only) -->
+                        <div x-show="isLoggedIn && user.role === 'candidate' && problemStartTime"
+                            class="flex items-center gap-3 px-4 py-1.5 rounded-xl border"
+                            :class="timerRemainingSeconds <= 60 ? 'bg-red-950/50 border-red-700/50' : timerRemainingSeconds <= 180 ? 'bg-amber-950/50 border-amber-700/50' : 'bg-slate-900 border-slate-700'">
+                            <i class="fas fa-clock text-xs" :class="timerColor"></i>
+                            <div class="text-xs font-black font-mono" :class="timerColor" x-text="timerDisplay"></div>
+                            <div class="text-[9px] text-slate-500 uppercase tracking-widest">remaining</div>
+                            <div x-show="timePool > 0" class="text-[9px] text-emerald-400 font-bold"
+                                x-text="'+' + Math.floor(timePool/60) + 'm banked'"></div>
+                        </div>
+
                         <!-- Action Buttons -->
                         <div class="flex items-center gap-2 pr-4">
                             <button x-show="buildReport" @click="downloadLogs"
@@ -1129,16 +1140,19 @@
                     <div x-show="!gradingSubmission" class="space-y-8">
                         <div class="flex justify-between items-end">
                             <div>
-                                <h2 class="text-3xl font-black text-white tracking-tighter">Review <span
-                                        class="text-emerald-500">Submissions</span></h2>
-                                <p class="text-xs text-slate-500 mt-1">Industrial-grade code evaluation & feedback
-                                    system.</p>
+                                <h2 class="text-3xl font-black text-white tracking-tighter">Candidate <span
+                                        class="text-emerald-500">Reports</span></h2>
+                                <p class="text-xs text-slate-500 mt-1">Detailed problem-wise reports with code, test results & violation logs.</p>
                             </div>
                             <div class="flex items-center gap-3">
+                                <!-- Download All Reports -->
+                                <button @click="downloadAllReports()"
+                                    class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs border border-blue-600 transition-all font-black flex items-center gap-2">
+                                    <i class="fas fa-download"></i> Download All Reports
+                                </button>
                                 <!-- Enhanced Search -->
                                 <div class="relative">
-                                    <i
-                                        class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
                                     <input type="text" x-model="adminSearch" placeholder="Search candidate..."
                                         class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 w-64 transition-all">
                                 </div>
@@ -1228,12 +1242,9 @@
                                             </td>
                                             <td class="px-5 py-4 text-right">
                                                 <button @click="openGrading(sub)"
-                                                    class="text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all"
-                                                    :class="sub.status === 'graded' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-900/20'">
-                                                    <i class="fas"
-                                                        :class="sub.status === 'graded' ? 'fa-eye' : 'fa-pen-nib'"></i>
-                                                    <span
-                                                        x-text="sub.status === 'graded' ? 'Review' : 'Grade Now'"></span>
+                                                    class="text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all bg-blue-700 hover:bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-900/20">
+                                                    <i class="fas fa-file-alt mr-1"></i>
+                                                    View Report
                                                 </button>
                                             </td>
                                         </tr>
@@ -1250,13 +1261,152 @@
                                 class="w-10 h-10 bg-slate-900 border border-slate-800 text-slate-500 hover:text-white rounded-xl flex items-center justify-center transition-all">
                                 <i class="fas fa-arrow-left"></i>
                             </button>
-                            <div>
-                                <h3 class="text-xl font-black text-white tracking-tight">Grading: <span
+                            <div class="flex-1">
+                                <h3 class="text-xl font-black text-white tracking-tight">Report: <span
                                         class="text-blue-500" x-text="gradingSubmission?.candidateName"></span></h3>
                                 <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold"
                                     x-text="gradingSubmission?.projectTitle"></p>
                             </div>
+                            <button @click="downloadCandidateReport({ name: gradingSubmission.candidateName, email: gradingSubmission.email })"
+                                class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs transition-all flex items-center gap-2">
+                                <i class="fas fa-download"></i> Download Report
+                            </button>
                         </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Code Viewer -->
+                            <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl h-[700px] flex flex-col">
+                                <div class="px-6 py-4 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
+                                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <i class="fas fa-terminal text-blue-400"></i> Submitted Source Code
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                                        <div class="w-3 h-3 rounded-full bg-amber-500/50"></div>
+                                        <div class="w-3 h-3 rounded-full bg-emerald-500/50"></div>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-hidden flex flex-col">
+                                    <template x-if="gradingDetail">
+                                        <div class="flex-1 flex flex-col overflow-hidden">
+                                            <template x-for="file in gradingDetail.code" :key="file.name">
+                                                <div class="flex-1 flex flex-col overflow-hidden">
+                                                    <div class="px-6 py-2 bg-slate-950/80 text-[10px] font-bold text-blue-400 flex items-center gap-2 border-b border-slate-800">
+                                                        <i class="fas fa-file-code"></i> <span x-text="file.name"></span>
+                                                    </div>
+                                                    <pre class="flex-1 p-6 text-xs code-font text-slate-300 overflow-auto bg-slate-950 custom-scrollbar leading-relaxed" x-text="file.content"></pre>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div x-show="!gradingDetail" class="flex-1 flex items-center justify-center text-slate-600 bg-slate-950">
+                                        <div class="text-center">
+                                            <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-500/50"></i>
+                                            <p class="text-xs font-bold uppercase tracking-widest">Loading Code...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Report Panel -->
+                            <div class="space-y-4">
+                                <!-- Score & Test Results -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4 class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                                        <i class="fas fa-chart-bar"></i> Score & Test Results
+                                    </h4>
+                                    <div class="grid grid-cols-3 gap-4 mb-6">
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Auto Score</div>
+                                            <div class="text-3xl font-black text-blue-400" x-text="(gradingSubmission?.autoScore || 0) + '%'"></div>
+                                        </div>
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Tests</div>
+                                            <div class="text-3xl font-black text-emerald-400" x-text="(gradingSubmission?.testsPassed || 0) + '/' + (gradingSubmission?.testsTotal || 0)"></div>
+                                        </div>
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Violations</div>
+                                            <div class="text-3xl font-black" :class="(gradingSubmission?.violationCount || 0) > 0 ? 'text-red-400' : 'text-slate-500'" x-text="gradingSubmission?.violationCount || 0"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Test case pass/fail breakdown -->
+                                    <div class="space-y-2">
+                                        <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Test Case Breakdown</div>
+                                        <template x-if="gradingDetail && gradingDetail.testResults">
+                                            <div class="space-y-2">
+                                                <template x-for="(t, i) in (typeof gradingDetail.testResults === 'string' ? JSON.parse(gradingDetail.testResults || '[]') : (gradingDetail.testResults || []))" :key="i">
+                                                    <div class="flex items-center justify-between bg-slate-950 px-4 py-2.5 rounded-xl">
+                                                        <div class="flex items-center gap-2">
+                                                            <i class="fas text-xs" :class="t.passed ? 'fa-check-circle text-emerald-400' : 'fa-times-circle text-red-400'"></i>
+                                                            <span class="text-xs text-slate-300 font-bold" x-text="t.name || ('Test ' + (i+1))"></span>
+                                                        </div>
+                                                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg"
+                                                            :class="t.passed ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'"
+                                                            x-text="t.passed ? 'PASS' : 'FAIL'"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <div x-show="!gradingDetail" class="text-center py-4 text-slate-600 text-xs italic">Loading test results...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Violation Log -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4 class="text-xs font-black text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i class="fas fa-shield-alt"></i> Violation Log
+                                    </h4>
+                                    <template x-if="gradingSubmission && gradingSubmission.violationCount > 0">
+                                        <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                            <template x-for="(v, i) in (typeof gradingSubmission.violationLog === 'string' ? JSON.parse(gradingSubmission.violationLog || '[]') : (gradingSubmission.violationLog || []))" :key="i">
+                                                <div class="flex items-start gap-2 bg-red-950/20 border border-red-900/30 px-3 py-2 rounded-xl">
+                                                    <i class="fas fa-exclamation-triangle text-red-400 text-[10px] mt-0.5"></i>
+                                                    <div>
+                                                        <div class="text-[10px] text-red-300 font-bold" x-text="v.reason"></div>
+                                                        <div class="text-[9px] text-slate-600" x-text="v.time + (v.problem ? ' — ' + v.problem : '')"></div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div x-show="!gradingSubmission || !gradingSubmission.violationCount" class="text-center py-4 text-slate-600 text-xs italic">
+                                        <i class="fas fa-check-circle text-emerald-500 mr-2"></i> No violations recorded
+                                    </div>
+                                </div>
+
+                                <!-- Submission Info -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i class="fas fa-info-circle"></i> Submission Info
+                                    </h4>
+                                    <div class="space-y-2 text-xs">
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Candidate</span>
+                                            <span class="text-white font-bold" x-text="gradingSubmission?.candidateName"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Email</span>
+                                            <span class="text-blue-400" x-text="gradingSubmission?.email"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Problem</span>
+                                            <span class="text-slate-300" x-text="gradingSubmission?.projectTitle"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Submitted</span>
+                                            <span class="text-slate-300" x-text="gradingSubmission?.submittedAt ? new Date(gradingSubmission.submittedAt).toLocaleString() : '—'"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1">
+                                            <span class="text-slate-500 font-bold">Status</span>
+                                            <span class="font-black uppercase text-[10px] px-2 py-0.5 rounded-lg"
+                                                :class="gradingSubmission?.status === 'graded' ? 'bg-emerald-900/40 text-emerald-400' : 'bg-amber-900/40 text-amber-400'"
+                                                x-text="gradingSubmission?.status"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <!-- Code Viewer -->
@@ -1302,78 +1452,6 @@
                             </div>
 
                             <!-- Grading Controls -->
-                            <div class="space-y-6 flex flex-col">
-                                <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl flex-1">
-                                    <h4
-                                        class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-8 flex items-center gap-2">
-                                        <i class="fas fa-tasks"></i> Rubric Assessment
-                                    </h4>
-
-                                    <div class="grid grid-cols-1 gap-8">
-                                        <template x-for="metric in ['correctness', 'codeQuality', 'logic', 'style']">
-                                            <div class="bg-slate-950/50 p-6 rounded-2xl border border-slate-800/50">
-                                                <div class="flex justify-between items-center mb-4">
-                                                    <label
-                                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest"
-                                                        x-text="metric.replace(/([A-Z])/g, ' $1')"></label>
-                                                    <div
-                                                        class="flex items-center gap-2 bg-slate-900 px-3 py-1 rounded-lg border border-slate-800">
-                                                        <span class="text-lg font-black text-blue-500"
-                                                            x-text="gradeScores[metric]"></span>
-                                                        <span class="text-[10px] text-slate-600 uppercase">/ 10</span>
-                                                    </div>
-                                                </div>
-                                                <input type="range" min="0" max="10" step="1"
-                                                    x-model.number="gradeScores[metric]"
-                                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
-                                            </div>
-                                        </template>
-                                    </div>
-
-                                    <!-- Comment Area -->
-                                    <div class="mt-8">
-                                        <h4
-                                            class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                            <i class="fas fa-comment-dots text-indigo-400"></i> Trainer Feedback &
-                                            Insights
-                                        </h4>
-                                        <textarea x-model="gradeComments" rows="4"
-                                            placeholder="Provide actionable feedback for the candidate..."
-                                            class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-sm text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 resize-none code-font placeholder:text-slate-700"></textarea>
-                                    </div>
-                                </div>
-
-                                <!-- Summary & Submit -->
-                                <div
-                                    class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl flex items-center justify-between gap-10">
-                                    <div class="flex items-center gap-8">
-                                        <div class="text-center">
-                                            <div
-                                                class="text-[9px] text-slate-600 uppercase font-black tracking-widest mb-1">
-                                                Composite</div>
-                                            <div class="text-3xl font-black text-white"
-                                                x-text="Math.round((gradingSubmission?.autoScore || 0) * 0.2 + ((gradeScores.correctness + gradeScores.codeQuality + gradeScores.logic + gradeScores.style) / 4) * 10 * 0.8) + '%'">
-                                            </div>
-                                        </div>
-                                        <div class="w-px h-10 bg-slate-800"></div>
-                                        <div>
-                                            <div class="text-[9px] text-slate-600 uppercase font-bold">Auto (20%): <span
-                                                    class="text-blue-400"
-                                                    x-text="(gradingSubmission?.autoScore || 0) + '%'"></span></div>
-                                            <div class="text-[9px] text-slate-600 uppercase font-bold">Manual (80%):
-                                                <span class="text-emerald-400"
-                                                    x-text="Math.round(((gradeScores.correctness + gradeScores.codeQuality + gradeScores.logic + gradeScores.style) / 4) * 10) + '%'"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button @click="submitGrade()" :disabled="isGrading"
-                                        class="px-10 py-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-emerald-900/40 flex items-center justify-center gap-3">
-                                        <i class="fas" :class="isGrading ? 'fa-sync fa-spin' : 'fa-check-circle'"></i>
-                                        <span x-text="isGrading ? 'Finalizing...' : 'Submit Grade'"></span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -1585,6 +1663,39 @@
                     class="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
                     <i class="fas" :class="isSubmitting ? 'fa-circle-notch fa-spin' : 'fa-check'"></i>
                     <span x-text="isSubmitting ? 'Submitting...' : 'Confirm Submit'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 1-Minute Warning Toast ── -->
+    <div x-show="problemTimeWarning && user.role === 'candidate'" x-cloak x-transition
+        class="fixed top-6 left-1/2 -translate-x-1/2 z-[400] bg-amber-700 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-bold">
+        <i class="fas fa-exclamation-triangle text-xl animate-pulse"></i>
+        <div>
+            <div class="font-black">⏱ 1 Minute Remaining!</div>
+            <div class="text-[11px] text-amber-200 mt-0.5">Wrap up or your time will expire for this problem.</div>
+        </div>
+    </div>
+
+    <!-- ── Timer Expired Modal ── -->
+    <div x-show="problemTimerExpired && user.role === 'candidate'" x-cloak
+        class="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-red-700/50 rounded-3xl p-10 max-w-md w-full text-center shadow-2xl shadow-red-900/30">
+            <div class="w-20 h-20 bg-red-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-hourglass-end text-4xl text-red-400"></i>
+            </div>
+            <h2 class="text-2xl font-black text-white mb-2">Time's Up!</h2>
+            <p class="text-sm text-slate-400 mb-2">Your allocated time for this problem has expired.</p>
+            <p class="text-xs text-slate-500 mb-8">You can move to the next problem — any banked time from previous problems has been used.</p>
+            <div class="flex gap-3">
+                <button @click="problemTimerExpired = false; startProblemTimer()"
+                    class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3 rounded-xl font-bold text-sm transition-all">
+                    <i class="fas fa-redo mr-2"></i> Stay on Problem
+                </button>
+                <button @click="moveToNextProblem()"
+                    class="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-black text-sm transition-all">
+                    <i class="fas fa-arrow-right mr-2"></i> Move to Next
                 </button>
             </div>
         </div>
@@ -1947,6 +2058,19 @@
                 violationWarning: false,
                 criticalViolationWarning: false,
                 violationLog: [],
+                PROBLEM_LIMIT_SECS: 900,
+                timePool: 0,
+                problemStartTime: null,
+                problemElapsed: 0,
+                problemTimerInterval: null,
+                problemTimeWarning: false,
+                problemTimerExpired: false,
+                problemTimeLog: {},
+                totalTimeUsed: 0,
+
+
+
+
 
                 // Platform config (from /api/config)
                 topicFilter: [],   // empty = show all topics
@@ -2769,8 +2893,7 @@
                     this.$watch('adminTab', () => this.saveSession());
                     this.$watch('activeFileIdx', () => this.saveSession());
 
-                    // Proctoring / Anti-Cheat
-                    /* TEMPORARILY DISABLED FOR TESTING
+                    // ── Proctoring / Anti-Cheat (ACTIVE) ──────────────────
                     document.addEventListener('contextmenu', (e) => {
                         if (this.isLoggedIn && this.user.role === 'candidate') {
                             e.preventDefault();
@@ -2782,19 +2905,22 @@
                             this.registerViolation('Tab switch / window unfocused');
                         }
                     });
+                    window.addEventListener('blur', () => {
+                        if (this.isLoggedIn && this.user.role === 'candidate') {
+                            this.registerViolation('Window focus lost (possible tab switch)');
+                        }
+                    });
                     document.addEventListener('keydown', (e) => {
                         if (!this.isLoggedIn || this.user.role !== 'candidate') return;
                         if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.key === 'u')) {
                             e.preventDefault();
-                            this.registerViolation('DevTools/Source access shortcut blocked');
+                            this.registerViolation('DevTools/Source access attempt blocked');
                         }
-                        // Block copy, cut, paste
                         if (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V')) {
                             e.preventDefault();
                             this.registerViolation('Copy/Paste/Cut attempt blocked');
                         }
                     });
-                    // Also block copy/paste via clipboard events
                     document.addEventListener('copy', (e) => {
                         if (this.isLoggedIn && this.user.role === 'candidate') {
                             e.preventDefault();
@@ -2813,7 +2939,6 @@
                             this.registerViolation('Paste attempt blocked');
                         }
                     });
-                    */
                 },
 
                 _getToken() { return localStorage.getItem('vlab_token'); },
@@ -3000,6 +3125,10 @@
                 },
 
                 async selectProject(project) {
+                    // Bank time from previous problem before switching
+                    if (this.problemStartTime && this.activeProject && this.activeProject.id !== project.id) {
+                        this.bankRemainingTime();
+                    }
                     this.activeProject = project;
                     this.activeFileIdx = 0;
                     this.wsTab = 'editor';
@@ -3033,6 +3162,10 @@
                         this.activeFiles = JSON.parse(JSON.stringify(project.files || []));
                     }
                     this.saveSession();
+                    // Start problem timer for candidates
+                    if (this.isLoggedIn && this.user.role === 'candidate') {
+                        this.startProblemTimer();
+                    }
                 },
 
                 get filteredProjects() {
@@ -3617,55 +3750,19 @@
                 async openGrading(sub) {
                     this.gradingSubmission = sub;
                     this.gradingDetail = null;
-                    this.gradeComments = '';
-                    // Pre-fill scores if already graded
-                    if (sub.grade && sub.grade.scores) {
-                        this.gradeScores = { ...sub.grade.scores };
-                        this.gradeComments = sub.grade.comments || '';
-                    } else {
-                        this.gradeScores = { correctness: 0, codeQuality: 0, logic: 0, style: 0 };
-                    }
-                    // Fetch full submission detail (with code)
+                    // Fetch full submission detail (with code + testResults)
                     try {
                         const response = await fetch('/api/submission/' + sub.id, {
                             headers: this._authHeaders()
                         });
-                        this.gradingDetail = await response.json();
+                        const detail = await response.json();
+                        // Merge full detail back into gradingSubmission for report panel
+                        this.gradingSubmission = { ...sub, ...detail };
+                        this.gradingDetail = detail;
                     } catch (e) {
                         console.error('Failed to load submission detail:', e);
+                        this.gradingDetail = { code: [], testResults: [] };
                     }
-                },
-
-                async submitGrade() {
-                    if (this.isGrading || !this.gradingSubmission) return;
-                    this.isGrading = true;
-                    try {
-                        const response = await fetch('/api/grade', {
-                            method: 'POST',
-                            headers: this._authHeaders(),
-                            body: JSON.stringify({
-                                submissionId: this.gradingSubmission.id,
-                                scores: this.gradeScores,
-                                comments: this.gradeComments,
-                                trainerName: this.user.name || 'Trainer'
-                            })
-                        });
-                        const result = await response.json();
-                        if (result.success) {
-                            this.successToast = '✅ Grade submitted successfully! Composite: ' + result.grade.compositeScore + '%';
-                            setTimeout(() => { this.successToast = ''; }, 5000);
-                            this.gradingSubmission = null;
-                            this.gradingDetail = null;
-                            this.loadAllSubmissions();
-                        } else {
-                            this.successToast = '❌ Grading failed: ' + (result.error || 'Unknown error');
-                            setTimeout(() => { this.successToast = ''; }, 4000);
-                        }
-                    } catch (e) {
-                        this.successToast = '❌ Could not reach server.';
-                        setTimeout(() => { this.successToast = ''; }, 4000);
-                    }
-                    this.isGrading = false;
                 },
 
                 downloadLogs() {
@@ -3723,17 +3820,197 @@
                     this.violationLog.push({
                         time: new Date().toLocaleTimeString(),
                         reason: reason,
-                        count: this.violationCount
+                        count: this.violationCount,
+                        problem: this.activeProject?.title || '—'
                     });
-                    // Show critical warning at 10+ violations
                     if (this.violationCount >= 10) {
                         this.criticalViolationWarning = true;
                     } else {
                         this.violationWarning = true;
-                        // auto-dismiss after 3 seconds
                         setTimeout(() => { this.violationWarning = false; }, 3000);
                     }
+                },
+
+                // ── Problem Timer Pool ────────────────────────────────────
+                startProblemTimer() {
+                    this.stopProblemTimer();
+                    this.problemStartTime = Date.now();
+                    this.problemElapsed = 0;
+                    this.problemTimeWarning = false;
+                    this.problemTimerExpired = false;
+
+                    this.problemTimerInterval = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - this.problemStartTime) / 1000);
+                        this.problemElapsed = elapsed;
+                        const budget = this.PROBLEM_LIMIT_SECS + this.timePool;
+                        const remaining = budget - elapsed;
+
+                        // 1 minute warning
+                        if (remaining === 60) {
+                            this.problemTimeWarning = true;
+                            setTimeout(() => { this.problemTimeWarning = false; }, 8000);
+                        }
+                        // Time expired
+                        if (remaining <= 0) {
+                            this.problemTimerExpired = true;
+                            this.stopProblemTimer();
+                        }
+                    }, 1000);
+                },
+
+                stopProblemTimer() {
+                    if (this.problemTimerInterval) {
+                        clearInterval(this.problemTimerInterval);
+                        this.problemTimerInterval = null;
+                    }
+                },
+
+                bankRemainingTime() {
+                    // Called when user finishes early or moves on — bank leftover time
+                    const elapsed = Math.floor((Date.now() - this.problemStartTime) / 1000);
+                    const budget = this.PROBLEM_LIMIT_SECS + this.timePool;
+                    const leftover = budget - elapsed;
+                    // Log time for this problem
+                    if (this.activeProject) {
+                        this.problemTimeLog[this.activeProject.id] = elapsed;
+                        this.totalTimeUsed += elapsed;
+                    }
+                    // Bank unused time (min 0)
+                    this.timePool = Math.max(0, leftover);
+                    this.stopProblemTimer();
+                    this.problemTimerExpired = false;
+                },
+
+                get timerRemainingSeconds() {
+                    const budget = this.PROBLEM_LIMIT_SECS + this.timePool;
+                    return Math.max(0, budget - this.problemElapsed);
+                },
+
+                get timerDisplay() {
+                    const s = this.timerRemainingSeconds;
+                    const m = Math.floor(s / 60);
+                    const sec = s % 60;
+                    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2,'0');
+                },
+
+                get timerColor() {
+                    const s = this.timerRemainingSeconds;
+                    if (s <= 60) return 'text-red-400';
+                    if (s <= 180) return 'text-amber-400';
+                    return 'text-emerald-400';
+                },
+
+                moveToNextProblem() {
+                    this.bankRemainingTime();
+                    this.problemTimerExpired = false;
+                    // Find next project in allowed list
+                    const list = this.allowedProjects;
+                    const idx = list.findIndex(p => p.id === this.activeProject?.id);
+                    const next = list[idx + 1];
+                    if (next) {
+                        this.selectProject(next);
+                    } else {
+                        this.currentView = 'dashboard';
+                    }
+                },
+
+                // ── Detailed Report Builder ───────────────────────────────
+                buildCandidateReport(candidate) {
+                    const subs = this.allSubmissions.filter(s =>
+                        s.email === candidate.email
+                    );
+                    let report = '════════════════════════════════════════════════════════\n';
+                    report += '  VISTEON × SKILL-LYNC — CANDIDATE DETAILED REPORT\n';
+                    report += '════════════════════════════════════════════════════════\n\n';
+                    report += `Name    : ${candidate.name}\n`;
+                    report += `Email   : ${candidate.email}\n`;
+                    report += `Generated: ${new Date().toLocaleString()}\n\n`;
+
+                    report += '──────────────────────────────────────────────────────\n';
+                    report += '  SUMMARY\n';
+                    report += '──────────────────────────────────────────────────────\n';
+                    report += `Total Submissions : ${subs.length}\n`;
+                    report += `Violations        : ${subs.reduce((a,s) => a + (s.violationCount || 0), 0)}\n\n`;
+
+                    report += '──────────────────────────────────────────────────────\n';
+                    report += '  PROBLEM-WISE BREAKDOWN\n';
+                    report += '──────────────────────────────────────────────────────\n';
+
+                    subs.forEach((s, i) => {
+                        report += `\n[${i+1}] ${s.projectTitle || s.projectId}\n`;
+                        report += `    Score       : ${s.autoScore || 0}%\n`;
+                        report += `    Tests       : ${s.testsPassed}/${s.testsTotal} passed\n`;
+                        report += `    Status      : ${s.status}\n`;
+                        report += `    Submitted   : ${new Date(s.submittedAt).toLocaleString()}\n`;
+                        if (s.violationCount > 0) {
+                            report += `    ⚠ Violations: ${s.violationCount}\n`;
+                        }
+                        // Test case pass/fail
+                        if (s.testResults) {
+                            try {
+                                const tr = typeof s.testResults === 'string' ? JSON.parse(s.testResults) : s.testResults;
+                                tr.forEach(t => {
+                                    const icon = t.passed ? '✓' : '✗';
+                                    report += `    ${icon} ${t.name}: ${t.passed ? 'PASS' : 'FAIL'}\n`;
+                                });
+                            } catch {}
+                        }
+                        // Code
+                        if (s.code) {
+                            try {
+                                const code = typeof s.code === 'string' ? JSON.parse(s.code) : s.code;
+                                code.forEach(f => {
+                                    report += `\n    ── ${f.name} ──\n`;
+                                    (f.content || '').split('\n').forEach(line => {
+                                        report += `    ${line}\n`;
+                                    });
+                                });
+                            } catch {}
+                        }
+                    });
+
+                    report += '\n════════════════════════════════════════════════════════\n';
+                    report += '  VIOLATION LOG\n';
+                    report += '════════════════════════════════════════════════════════\n';
+                    const allViolations = subs.flatMap(s => {
+                        try { return typeof s.violationLog === 'string' ? JSON.parse(s.violationLog || '[]') : (s.violationLog || []); }
+                        catch { return []; }
+                    });
+                    if (allViolations.length === 0) {
+                        report += 'No violations recorded.\n';
+                    } else {
+                        allViolations.forEach(v => {
+                            report += `  [${v.time}] ${v.reason} (Problem: ${v.problem || '—'})\n`;
+                        });
+                    }
+                    report += '\n════════════════════════════════════════════════════════\n';
+                    return report;
+                },
+
+                downloadCandidateReport(candidate) {
+                    const report = this.buildCandidateReport(candidate);
+                    const blob = new Blob([report], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `report_${candidate.email.replace('@','_')}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                },
+
+                downloadAllReports() {
+                    const unique = [...new Map(this.allSubmissions.map(s => [s.email, { name: s.candidateName, email: s.email }])).values()];
+                    let combined = '';
+                    unique.forEach(c => { combined += this.buildCandidateReport(c) + '\n\n'; });
+                    const blob = new Blob([combined], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `all_candidates_report_${new Date().toISOString().slice(0,10)}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
                 }
+
             }
         }
     </script>
