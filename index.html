@@ -3181,55 +3181,50 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const isVisteon = (typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email)) || (urlParams.get('client') === 'visteon');
 
-                    // 1. Admin sees everything (unless explicitly filtered)
+                    // 1. Visteon users ALWAYS see ONLY Visteon topics (highest priority)
+                    if (isVisteon) {
+                        return this.topics.filter(t => t.id === 'VISTEON_C' || t.id === 'VISTEON_C_BASIC');
+                    }
+
+                    // 2. Admin sees everything
                     if (this.user && this.user.role === 'admin') {
                         let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
-                        // Always allow admin to see VISTEON_C even if filtered
-                        if (!base.some(t => t.id === 'VISTEON_C')) {
-                            const visteonTopic = this.topics.find(t => t.id === 'VISTEON_C');
-                            if (visteonTopic) base.push(visteonTopic);
-                        }
                         return base.filter(Boolean);
                     }
 
-                    // 2. Filter by topicVisibility from JSON (if available)
+                    // 3. Filter by topicVisibility from JSON (if available)
                     if (Object.keys(this.topicVisibility).length > 0) {
                         return this.topics.filter(t => this.topicVisibility[t.name] === true);
                     }
 
-                    // 3. Visteon users see ONLY VISTEON_C
-                    if (isVisteon) {
-                        return this.topics.filter(t => t.id === 'VISTEON_C');
-                    }
-
-                    // 4. Others see filtered topics (excluding VISTEON_C)
+                    // 4. Others see filtered topics (excluding Visteon topics)
                     let base = this.topicFilter.length ? this.topics.filter(t => this.topicFilter.includes(t.id)) : this.topics;
-                    return base.filter(t => t.id !== 'VISTEON_C');
+                    return base.filter(t => t.id !== 'VISTEON_C' && t.id !== 'VISTEON_C_BASIC');
                 },
 
                 get allowedProjects() {
                     const urlParams = new URLSearchParams(window.location.search);
                     const isVisteon = (typeof window.isVisteonUser === 'function' && window.isVisteonUser(this.user?.email)) || (urlParams.get('client') === 'visteon');
 
-                    // 1. Admin sees everything (unless explicitly filtered)
-                    if (this.user && this.user.role === 'admin') {
-                        if (!this.topicFilter.length) return this.projects;
-                        return this.projects.filter(p => this.topicFilter.includes(p.topicId) || p.topicId === 'VISTEON_C');
+                    // 1. Visteon users ALWAYS see ONLY Visteon projects (highest priority)
+                    if (isVisteon) {
+                        return this.projects.filter(p => p.topicId === 'VISTEON_C' || p.topicId === 'VISTEON_C_BASIC');
                     }
 
-                    // 2. Filter by topicVisibility from JSON (if available)
+                    // 2. Admin sees everything
+                    if (this.user && this.user.role === 'admin') {
+                        if (!this.topicFilter.length) return this.projects;
+                        return this.projects.filter(p => this.topicFilter.includes(p.topicId));
+                    }
+
+                    // 3. Filter by topicVisibility from JSON (if available)
                     if (Object.keys(this.topicVisibility).length > 0) {
                         const visibleTopicIds = this.topics.filter(t => this.topicVisibility[t.name] === true).map(t => t.id);
                         return this.projects.filter(p => visibleTopicIds.includes(p.topicId));
                     }
 
-                    // 3. Visteon users see ONLY VISTEON_C
-                    if (isVisteon) {
-                        return this.projects.filter(p => p.topicId === 'VISTEON_C');
-                    }
-
-                    // 4. Others see filtered projects (excluding VISTEON_C)
-                    let allowed = this.projects.filter(p => p.topicId !== 'VISTEON_C');
+                    // 4. Others see filtered projects (excluding Visteon topics)
+                    let allowed = this.projects.filter(p => p.topicId !== 'VISTEON_C' && p.topicId !== 'VISTEON_C_BASIC');
                     if (!this.topicFilter.length) return allowed;
                     return allowed.filter(p => this.topicFilter.includes(p.topicId));
                 },
