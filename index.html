@@ -48,7 +48,19 @@
             font-family: 'Inter', sans-serif;
         }
 
-        /* ── Scrolling ticker ── */
+        /* ── Block text selection for candidates ── */
+        body.candidate-mode *:not(textarea):not(input):not(pre):not(code) {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+        body.candidate-mode textarea,
+        body.candidate-mode .cm-editor {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+
         .ticker-track {
             display: inline-flex;
             animation: ticker-scroll 60s linear infinite;
@@ -137,7 +149,8 @@
     </script>
 </head>
 
-<body class="bg-slate-950 text-slate-200 h-screen overflow-hidden" x-data="labApp()">
+<body class="bg-slate-950 text-slate-200 h-screen overflow-hidden" x-data="labApp()"
+    :class="{ 'candidate-mode': isLoggedIn && user.role === 'candidate' }">
 
     <!-- 1. Authentication Gateway -->
     <div x-show="!isLoggedIn" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-stretch justify-start">
@@ -548,11 +561,24 @@
                                     <i x-show="project.solved"
                                         class="fas fa-check-circle text-emerald-500 text-[10px]"></i>
                                 </div>
-                                <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-3 flex-wrap">
                                     <span class="text-[9px] text-slate-600 font-bold uppercase"
                                         x-text="project.difficulty"></span>
                                     <span class="text-[9px] text-slate-600 font-bold"><i class="fas fa-award mr-1"></i>
                                         <span x-text="project.points"></span></span>
+                                    <!-- Timer indicator for active problem -->
+                                    <span x-show="activeProject.id === project.id && problemStartTime && user.role === 'candidate'"
+                                        class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                                        :class="timerRemainingSeconds <= 60 ? 'bg-red-900/50 text-red-400' : timerRemainingSeconds <= 180 ? 'bg-amber-900/50 text-amber-400' : 'bg-slate-700 text-slate-400'">
+                                        <i class="fas fa-clock"></i>
+                                        <span x-text="timerDisplay"></span>
+                                    </span>
+                                    <!-- Violations badge for this problem -->
+                                    <span x-show="user.role === 'candidate' && violationLog.filter(v => v.problem === project.title).length > 0"
+                                        class="inline-flex items-center gap-1 text-[9px] font-black bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded-md">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <span x-text="violationLog.filter(v => v.problem === project.title).length + ' violation' + (violationLog.filter(v => v.problem === project.title).length > 1 ? 's' : '')"></span>
+                                    </span>
                                 </div>
                             </div>
                         </template>
@@ -594,13 +620,11 @@
                             <i class="fas fa-clock text-xs" :class="timerColor"></i>
                             <div class="text-xs font-black font-mono" :class="timerColor" x-text="timerDisplay"></div>
                             <div class="text-[9px] text-slate-500 uppercase tracking-widest">remaining</div>
-                            <div x-show="timePool > 0" class="text-[9px] text-emerald-400 font-bold"
-                                x-text="'+' + Math.floor(timePool/60) + 'm banked'"></div>
                         </div>
 
                         <!-- Action Buttons -->
                         <div class="flex items-center gap-2 pr-4">
-                            <button x-show="buildReport" @click="downloadLogs"
+                            <button x-show="buildReport && user.role === 'admin'" @click="downloadLogs"
                                 class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center gap-2 border border-slate-700">
                                 <i class="fas fa-download"></i> Save Report
                             </button>
@@ -2121,7 +2145,7 @@
                 violationWarning: false,
                 criticalViolationWarning: false,
                 violationLog: [],
-                PROBLEM_LIMIT_SECS: 900,
+                PROBLEM_LIMIT_SECS: 720,
                 timePool: 0,
                 problemStartTime: null,
                 problemElapsed: 0,
@@ -2858,13 +2882,22 @@
                     });
                     document.addEventListener('keydown', (e) => {
                         if (!this.isLoggedIn || this.user.role !== 'candidate') return;
-                        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.key === 'u')) {
+                        // Block DevTools
+                        if (e.key === 'F12' ||
+                            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+                            (e.ctrlKey && (e.key === 'u' || e.key === 'U'))) {
                             e.preventDefault();
                             this.registerViolation('DevTools/Source access attempt blocked');
                         }
+                        // Block copy, cut, paste
                         if (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V')) {
                             e.preventDefault();
                             this.registerViolation('Copy/Paste/Cut attempt blocked');
+                        }
+                        // Block save, print, select-all
+                        if (e.ctrlKey && (e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P' || e.key === 'a' || e.key === 'A')) {
+                            e.preventDefault();
+                            this.registerViolation('Save/Print/Select-All attempt blocked');
                         }
                     });
                     document.addEventListener('copy', (e) => {
@@ -2883,6 +2916,19 @@
                         if (this.isLoggedIn && this.user.role === 'candidate') {
                             e.preventDefault();
                             this.registerViolation('Paste attempt blocked');
+                        }
+                    });
+                    // Block drag-to-copy (dragging selected text out of editor)
+                    document.addEventListener('dragstart', (e) => {
+                        if (this.isLoggedIn && this.user.role === 'candidate') {
+                            e.preventDefault();
+                            this.registerViolation('Drag/drop attempt blocked');
+                        }
+                    });
+                    // Block print via browser menu (Ctrl+P already caught above, this catches menu print)
+                    window.addEventListener('beforeprint', (e) => {
+                        if (this.isLoggedIn && this.user.role === 'candidate') {
+                            this.registerViolation('Print attempt detected');
                         }
                     });
                 },
@@ -3481,10 +3527,8 @@
                             // Save code to server + localStorage
                             localStorage.setItem('code_' + this.activeProject.id, JSON.stringify(this.activeFiles));
                             this._saveProgressToServer(this.activeProject.id, this.activeFiles, true);
-                            // Auto-download solution file
-                            this.downloadSolution();
                             // Show success toast
-                            this.successToast = `🎉 ${this.activeProject.title} — Completed! Solution saved.`;
+                            this.successToast = `🎉 ${this.activeProject.title} — Completed! Assignment submitted.`;
                             setTimeout(() => { this.successToast = ''; }, 5000);
                             // Run AI assessment automatically
                             this.runAIAssessment();
@@ -3522,20 +3566,6 @@
                         recommendations: ['Consider adding Doxygen documentation', 'Explicitly handle unexpected stdin overflow']
                     };
                     this.isAssessing = false;
-                },
-
-                downloadSolution() {
-                    const files = this.activeFiles;
-                    const projectId = this.activeProject.id;
-                    files.forEach(f => {
-                        const blob = new Blob([f.content], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${projectId}_${f.name}`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    });
                 },
 
                 async compileJudge0(source_code, stdin) {
@@ -3797,7 +3827,7 @@
                     this.problemTimerInterval = setInterval(() => {
                         const elapsed = Math.floor((Date.now() - this.problemStartTime) / 1000);
                         this.problemElapsed = elapsed;
-                        const budget = this.PROBLEM_LIMIT_SECS + this.timePool;
+                        const budget = this.PROBLEM_LIMIT_SECS;
                         const remaining = budget - elapsed;
 
                         // 1 minute warning
@@ -3821,23 +3851,18 @@
                 },
 
                 bankRemainingTime() {
-                    // Called when user finishes early or moves on — bank leftover time
+                    // Log time spent on this problem and stop the timer
                     const elapsed = Math.floor((Date.now() - this.problemStartTime) / 1000);
-                    const budget = this.PROBLEM_LIMIT_SECS + this.timePool;
-                    const leftover = budget - elapsed;
-                    // Log time for this problem
                     if (this.activeProject) {
                         this.problemTimeLog[this.activeProject.id] = elapsed;
                         this.totalTimeUsed += elapsed;
                     }
-                    // Bank unused time (min 0)
-                    this.timePool = Math.max(0, leftover);
                     this.stopProblemTimer();
                     this.problemTimerExpired = false;
                 },
 
                 get timerRemainingSeconds() {
-                    const budget = this.PROBLEM_LIMIT_SECS + this.timePool;
+                    const budget = this.PROBLEM_LIMIT_SECS;
                     return Math.max(0, budget - this.problemElapsed);
                 },
 
