@@ -764,6 +764,7 @@
                                     <!-- Code editor textarea -->
                                     <textarea x-show="activeFiles.length > 0"
                                         x-model="activeFiles[activeFileIdx].content" spellcheck="false"
+                                        @input.debounce.2000ms="triggerAutoSave()"
                                         placeholder="Write your C/C++ code here..."
                                         class="flex-1 bg-slate-950 p-6 text-sm code-font outline-none leading-relaxed resize-none text-slate-300"></textarea>
                                     <div x-show="activeFiles.length === 0"
@@ -3900,6 +3901,10 @@
 
                 registerViolation(reason) {
                     if (!this.isLoggedIn || this.user.role === 'admin') return;
+
+                    // Proactively save code before processing violation to ensure data isn't lost if they get locked out
+                    this.triggerAutoSave();
+
                     this.violationCount++;
                     this.violationLog.push({
                         time: new Date().toLocaleTimeString(),
@@ -3913,6 +3918,15 @@
                         this.violationWarning = true;
                         setTimeout(() => { this.violationWarning = false; }, 3000);
                     }
+                },
+
+                triggerAutoSave() {
+                    if (!this.isLoggedIn || !this.activeProject) return;
+                    this.autoSaveStatus = 'saving';
+                    localStorage.setItem('code_' + this.activeProject.id, JSON.stringify(this.activeFiles));
+                    const isSolved = this.solvedProjectIds.includes(this.activeProject.id);
+                    this._saveProgressToServer(this.activeProject.id, this.activeFiles, isSolved);
+                    this._showAutoSaveIndicator();
                 },
 
                 _showAutoSaveIndicator() {
