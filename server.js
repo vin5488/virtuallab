@@ -361,12 +361,18 @@ function requireAdmin(req, res, next) {
 // HEALTH CHECK
 // ══════════════════════════════════════════════════════
 app.get('/health', (req, res) => {
+    let submissionCount = 0, userCount = 0;
+    try {
+        submissionCount = db.prepare('SELECT COUNT(*) as c FROM submissions').get().c;
+        userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
+    } catch(e) {}
     res.json({
         status: 'ok',
         worker: WORKER_ID,
-        compileQueue: compileQueue.stats,
-        uptime: process.uptime(),
-        db: 'sqlite'
+        uptime: Math.round(process.uptime()),
+        db: DB_PATH,
+        submissions: submissionCount,
+        users: userCount
     });
 });
 
