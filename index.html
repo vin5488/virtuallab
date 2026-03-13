@@ -624,6 +624,13 @@
 
                         <!-- Action Buttons -->
                         <div class="flex items-center gap-2 pr-4">
+                            <!-- Auto-save indicator -->
+                            <div x-show="autoSaveStatus && user.role === 'candidate'"
+                                class="flex items-center gap-1.5 text-[9px] font-bold px-2 py-1 rounded-lg"
+                                :class="autoSaveStatus === 'saved' ? 'text-emerald-400 bg-emerald-950/50' : 'text-slate-500'">
+                                <i class="fas" :class="autoSaveStatus === 'saved' ? 'fa-check-circle' : 'fa-circle-notch fa-spin'"></i>
+                                <span x-text="autoSaveStatus === 'saved' ? 'Auto-saved' : 'Saving...'"></span>
+                            </div>
                             <button x-show="buildReport && user.role === 'admin'" @click="downloadLogs"
                                 class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center gap-2 border border-slate-700">
                                 <i class="fas fa-download"></i> Save Report
@@ -634,7 +641,7 @@
                                 <span x-text="isBuilding ? 'Building...' : 'Compile & Run Tests'"></span>
                             </button>
                             <button x-show="buildReport && buildReport.success && testResults.length > 0"
-                                @click="showSubmitModal = true"
+                                @click="checkOffDayThenSubmit()"
                                 class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center gap-2 shadow-lg shadow-emerald-900/20">
                                 <i class="fas fa-paper-plane"></i> Submit Assignment
                             </button>
@@ -1213,10 +1220,17 @@
                                     class="w-full bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between">
                                     Generate Batch Reports <i class="fas fa-chevron-right text-[10px]"></i>
                                 </button>
-                                <button @click="alert('Weekly automation is active.')"
-                                    class="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between">
-                                    Weekly Review Status <i class="fas fa-check-circle text-[10px]"></i>
+                                <!-- Send Weekly Report -->
+                                <button @click="sendWeeklyReport()"
+                                    :disabled="weeklyReportSending"
+                                    class="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between disabled:opacity-50">
+                                    <span x-text="weeklyReportSending ? 'Sending report...' : 'Send Weekly Report Now'"></span>
+                                    <i class="fas" :class="weeklyReportSending ? 'fa-circle-notch fa-spin' : 'fa-envelope'"></i>
                                 </button>
+                                <p class="text-[10px] text-slate-600 px-1">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Auto-sends every <span class="text-slate-500 font-bold">Friday at 6:00 PM IST</span> to all admin emails.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1698,6 +1712,34 @@
     </div>
     </div>
 
+    <!-- Off-Day Submission Warning Modal -->
+    <div x-show="showOffDayWarning" x-cloak x-transition
+        class="fixed inset-0 z-[350] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-amber-600/40 rounded-3xl p-10 max-w-md w-full text-center shadow-2xl shadow-amber-900/20">
+            <div class="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="fas fa-calendar-times text-3xl text-amber-400"></i>
+            </div>
+            <h2 class="text-xl font-black text-white mb-2">Off-Schedule Submission</h2>
+            <p class="text-sm text-slate-400 mb-2">
+                Assignments are scheduled for <span class="text-amber-400 font-bold">Monday, Wednesday & Friday</span> only.
+            </p>
+            <p class="text-xs text-slate-500 mb-8">
+                Today is <span class="font-bold text-white" x-text="new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })"></span>.
+                Your submission will be marked as <span class="text-amber-400 font-bold">off-schedule</span> in the report.
+            </p>
+            <div class="flex gap-3">
+                <button @click="showOffDayWarning = false"
+                    class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3 rounded-xl font-bold text-sm transition-all">
+                    <i class="fas fa-times mr-2"></i> Cancel
+                </button>
+                <button @click="showOffDayWarning = false; showSubmitModal = true"
+                    class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3 rounded-xl font-black text-sm transition-all">
+                    <i class="fas fa-paper-plane mr-2"></i> Submit Anyway
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Submit Assignment Modal -->
     <div x-show="showSubmitModal"
         class="fixed inset-0 z-[120] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-8" x-transition
@@ -2023,6 +2065,8 @@
                 rp2040LEDOn: false,
                 // Assignment Submission & Grading
                 showSubmitModal: false,
+                showOffDayWarning: false,
+                weeklyReportSending: false,
                 submitDay: 1,
                 isSubmitting: false,
                 mySubmissions: [],
@@ -2142,6 +2186,9 @@
                 isGrading: false,
                 // Anti-Cheat / Proctoring
                 violationCount: 0,
+                autoSaveStatus: '',        // '' | 'saving' | 'saved' | 'error'
+                autoSaveTimer: null,
+                _autoSaveTimer: null,
                 violationWarning: false,
                 criticalViolationWarning: false,
                 violationLog: [],
@@ -2940,23 +2987,58 @@
                     return token ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } : { 'Content-Type': 'application/json' };
                 },
 
+                _restoreViolations(email) {
+                    try {
+                        const stored = localStorage.getItem('vlab_violations_' + email);
+                        if (stored) {
+                            const { count, log } = JSON.parse(stored);
+                            // Only restore if more violations than current (don't overwrite a fresh session)
+                            if (count > this.violationCount) {
+                                this.violationCount = count || 0;
+                                this.violationLog = log || [];
+                            }
+                        }
+                    } catch(e) {}
+                },
+
                 async _loadServerProgress() {
                     try {
                         const r = await fetch('/api/progress', { headers: this._authHeaders() });
                         if (r.ok) {
                             const data = await r.json();
-                            this.solvedProjectIds = data.solvedProjectIds || [];
+                            const serverIds = data.solvedProjectIds || [];
+                            // Merge: union of server + localStorage so neither source loses data
+                            const localIds = JSON.parse(localStorage.getItem('solvedProjectIds') || '[]');
+                            const merged = [...new Set([...serverIds, ...localIds])];
+                            this.solvedProjectIds = merged;
+                            // Persist merged back to localStorage as source of truth
+                            localStorage.setItem('solvedProjectIds', JSON.stringify(merged));
+                            // If localStorage had IDs the server didn't — sync them up to server
+                            const missing = localIds.filter(id => !serverIds.includes(id));
+                            missing.forEach(id => {
+                                fetch('/api/progress/save', {
+                                    method: 'POST',
+                                    headers: this._authHeaders(),
+                                    body: JSON.stringify({ projectId: id, files: [], solved: true })
+                                }).catch(() => {});
+                            });
                         }
-                    } catch { } // Fallback to localStorage silently
+                    } catch {
+                        // Server unreachable — fall back to localStorage
+                        const localIds = JSON.parse(localStorage.getItem('solvedProjectIds') || '[]');
+                        if (localIds.length > 0) this.solvedProjectIds = localIds;
+                    }
                 },
 
                 _saveProgressToServer(projectId, files, solved) {
                     // Fire-and-forget: save progress in background without blocking UI
                     if (!this.isLoggedIn || !this._getToken()) return;
+                    // Never downgrade a solved problem — if it's already in solvedProjectIds keep it solved
+                    const isSolved = solved || this.solvedProjectIds.includes(projectId);
                     fetch('/api/progress/save', {
                         method: 'POST',
                         headers: this._authHeaders(),
-                        body: JSON.stringify({ projectId, files, solved })
+                        body: JSON.stringify({ projectId, files, solved: isSolved })
                     }).catch(() => { }); // Silently ignore network errors
                 },
 
@@ -3089,6 +3171,8 @@
                             // Save the active state locally so it's not lost on refresh
                             this.saveSession();
                             this._loadServerProgress();
+                            // Restore violations from localStorage (survives page close/refresh)
+                            this._restoreViolations(data.user.email);
                         }
                     } catch (e) {
                         alert('Network error. Make sure the server is running.');
@@ -3121,6 +3205,42 @@
                         alert('Network error.');
                     } finally {
                         this.authLoading = false;
+                    }
+                },
+
+                // Off-day submission check — Mon(1), Wed(3), Fri(5) are allowed
+                checkOffDayThenSubmit() {
+                    const day = new Date().getDay(); // 0=Sun,1=Mon,...,6=Sat
+                    const isAllowedDay = [1, 3, 5].includes(day);
+                    if (!isAllowedDay) {
+                        this.showOffDayWarning = true;
+                    } else {
+                        this.showSubmitModal = true;
+                    }
+                },
+
+                // Manual weekly report trigger for admins
+                async sendWeeklyReport() {
+                    if (this.weeklyReportSending) return;
+                    this.weeklyReportSending = true;
+                    const weekLabel = `Week ending ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+                    try {
+                        const r = await fetch('/api/admin/send-weekly-report', {
+                            method: 'POST',
+                            headers: this._authHeaders(),
+                            body: JSON.stringify({ weekLabel })
+                        });
+                        const data = await r.json();
+                        if (data.success) {
+                            this.successToast = `📧 Weekly report sent to ${data.sentTo?.join(', ')}`;
+                        } else {
+                            alert('Failed to send report: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Network error sending report.');
+                    } finally {
+                        this.weeklyReportSending = false;
+                        setTimeout(() => { this.successToast = ''; }, 5000);
                     }
                 },
 
@@ -3280,10 +3400,22 @@
                             cpp(),
                             oneDark,
                             EditorView.lineWrapping,
-                            EditorView.editable.of(true), // Explicitly make editable
+                            EditorView.editable.of(true),
                             EditorView.updateListener.of((update) => {
                                 if (update.docChanged && this.activeFiles[this.activeFileIdx]) {
                                     this.activeFiles[this.activeFileIdx].content = update.state.doc.toString();
+                                    // Debounced auto-save: 2s after user stops typing
+                                    clearTimeout(this._autoSaveTimer);
+                                    this._autoSaveTimer = setTimeout(() => {
+                                        if (this.isLoggedIn && this.activeProject) {
+                                            // Save to localStorage immediately
+                                            localStorage.setItem('code_' + this.activeProject.id, JSON.stringify(this.activeFiles));
+                                            // Save to server in background
+                                            const isSolved = this.solvedProjectIds.includes(this.activeProject.id);
+                                            this._saveProgressToServer(this.activeProject.id, this.activeFiles, isSolved);
+                                            this._showAutoSaveIndicator();
+                                        }
+                                    }, 2000);
                                 }
                             })
                         ],
@@ -3802,18 +3934,30 @@
                 registerViolation(reason) {
                     if (!this.isLoggedIn || this.user.role === 'admin') return;
                     this.violationCount++;
-                    this.violationLog.push({
+                    const entry = {
                         time: new Date().toLocaleTimeString(),
                         reason: reason,
                         count: this.violationCount,
                         problem: this.activeProject?.title || '—'
-                    });
+                    };
+                    this.violationLog.push(entry);
+                    // Persist violations to localStorage so they survive page refresh
+                    try {
+                        localStorage.setItem('vlab_violations_' + this.user.email,
+                            JSON.stringify({ count: this.violationCount, log: this.violationLog }));
+                    } catch(e) {}
                     if (this.violationCount >= 10) {
                         this.criticalViolationWarning = true;
                     } else {
                         this.violationWarning = true;
                         setTimeout(() => { this.violationWarning = false; }, 3000);
                     }
+                },
+
+                _showAutoSaveIndicator() {
+                    this.autoSaveStatus = 'saved';
+                    clearTimeout(this.autoSaveTimer);
+                    this.autoSaveTimer = setTimeout(() => { this.autoSaveStatus = ''; }, 3000);
                 },
 
                 // ── Problem Timer Pool ────────────────────────────────────
