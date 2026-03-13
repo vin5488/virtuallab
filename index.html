@@ -54,6 +54,7 @@
             -moz-user-select: none;
             user-select: none;
         }
+
         body.candidate-mode textarea,
         body.candidate-mode .cm-editor {
             -webkit-user-select: text;
@@ -65,12 +66,19 @@
             display: inline-flex;
             animation: ticker-scroll 60s linear infinite;
         }
+
         .ticker-track:hover {
             animation-play-state: paused;
         }
+
         @keyframes ticker-scroll {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
         }
 
         .code-font {
@@ -137,11 +145,11 @@
     </style>
     <script>
         // ── Visteon-only access enforcement ──────────────────────
-        window.isVisteonUser = function(email) {
+        window.isVisteonUser = function (email) {
             return typeof email === 'string' && email.toLowerCase().endsWith('@visteon.com');
         };
         // Admin/staff accounts (skill-lync.com) bypass the visteon-only restriction
-        window.isAllowedUser = function(email) {
+        window.isAllowedUser = function (email) {
             if (typeof email !== 'string') return false;
             const e = email.toLowerCase();
             return e.endsWith('@visteon.com') || e.endsWith('@skill-lync.com');
@@ -156,10 +164,12 @@
     <div x-show="!isLoggedIn" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-stretch justify-start">
 
         <!-- ── How-To Ticker Ribbon ── -->
-        <div class="w-full bg-gradient-to-r from-blue-900/80 via-slate-900/90 to-blue-900/80 border-b border-blue-700/40 py-2.5 overflow-hidden flex items-center gap-3 shrink-0">
+        <div
+            class="w-full bg-gradient-to-r from-blue-900/80 via-slate-900/90 to-blue-900/80 border-b border-blue-700/40 py-2.5 overflow-hidden flex items-center gap-3 shrink-0">
             <div class="shrink-0 flex items-center gap-2 px-4 border-r border-blue-700/40">
                 <i class="fas fa-info-circle text-blue-400 text-xs animate-pulse"></i>
-                <span class="text-[10px] font-black text-blue-400 uppercase tracking-widest whitespace-nowrap">How It Works</span>
+                <span class="text-[10px] font-black text-blue-400 uppercase tracking-widest whitespace-nowrap">How It
+                    Works</span>
             </div>
             <div class="overflow-hidden flex-1 relative">
                 <div class="ticker-track flex gap-16 items-center whitespace-nowrap">
@@ -204,103 +214,107 @@
 
         <!-- login content centred in remaining space -->
         <div class="flex-1 flex items-center justify-center p-4 overflow-y-auto">
-        <div class="max-w-md w-full">
-            <div class="text-center mb-10">
-                <div class="inline-flex items-center gap-3 mb-4">
-                    <div class="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-900/40">
-                        <i class="fas fa-microchip text-3xl text-white"></i>
+            <div class="max-w-md w-full">
+                <div class="text-center mb-10">
+                    <div class="inline-flex items-center gap-3 mb-4">
+                        <div class="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-900/40">
+                            <i class="fas fa-microchip text-3xl text-white"></i>
+                        </div>
+                        <h1 class="text-3xl font-extrabold tracking-tighter text-white" x-text="platformTitle">
+                            SkillLync<span class="text-blue-500">VirtualLab</span></h1>
                     </div>
-                    <h1 class="text-3xl font-extrabold tracking-tighter text-white" x-text="platformTitle">
-                        SkillLync<span class="text-blue-500">VirtualLab</span></h1>
+                    <p class="text-slate-400 text-sm" x-text="platformSubtitle">Industrial Grade Embedded & ECU Project
+                        Platform</p>
                 </div>
-                <p class="text-slate-400 text-sm" x-text="platformSubtitle">Industrial Grade Embedded & ECU Project
-                    Platform</p>
+
+                <!-- Admin Login -->
+                <template x-if="authStep === 'admin_login'">
+                    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
+                        <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i
+                                class="fas fa-lock text-blue-500"></i>
+                            Admin Access</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Admin
+                                    Email</label>
+                                <input type="email" x-model="adminCreds.email"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    placeholder="admin@example.com">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Password</label>
+                                <input type="password" x-model="adminCreds.pass"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    placeholder="••••••••">
+                            </div>
+                            <button @click="verifyAdmin"
+                                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2">
+                                Login to Dashboard <i class="fas fa-sign-in-alt text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Details Collection -->
+                <template x-if="authStep === 'details'">
+                    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
+                        <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i
+                                class="fas fa-id-card text-blue-500"></i> Register Profile</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Full
+                                    Name</label>
+                                <input type="text" x-model="user.name"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Work
+                                    Email
+                                    ID</label>
+                                <input type="email" x-model="user.email" @blur="validateEmail"
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    placeholder="name@company.com">
+                            </div>
+                            <button @click="generateCode"
+                                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2">
+                                Generate Access Code <i class="fas fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Code Verification -->
+                <template x-if="authStep === 'code'">
+                    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl text-center">
+                        <div
+                            class="w-16 h-16 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-envelope-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Check Your Email</h2>
+                        <p class="text-sm text-slate-400 mb-8">A unique access code has been sent to <br><span
+                                class="text-blue-400" x-text="user.email"></span></p>
+
+                        <div class="mb-8 p-4 bg-slate-950 border border-slate-800 rounded-2xl">
+                            <div class="text-[10px] font-bold text-slate-600 uppercase mb-2">Access Code</div>
+                            <div class="text-3xl font-black tracking-widest text-emerald-400" x-text="generatedCode">
+                            </div>
+                            <div x-show="generatedCode === '********'" class="text-[10px] text-slate-500 mt-2 italic">
+                                Sent
+                                to your mailbox</div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <input type="text" x-model="enteredCode" placeholder="Enter Access Code"
+                                class="w-full text-center text-xl font-bold bg-slate-950 border border-slate-800 rounded-xl py-4 focus:ring-2 focus:ring-emerald-500 outline-none uppercase tracking-widest">
+                            <button @click="verifyAndLogin"
+                                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all">
+                                Verify & Access Lab
+                            </button>
+                        </div>
+                    </div>
+                </template>
             </div>
-
-            <!-- Admin Login -->
-            <template x-if="authStep === 'admin_login'">
-                <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
-                    <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i class="fas fa-lock text-blue-500"></i>
-                        Admin Access</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Admin
-                                Email</label>
-                            <input type="email" x-model="adminCreds.email"
-                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                placeholder="admin@example.com">
-                        </div>
-                        <div>
-                            <label
-                                class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Password</label>
-                            <input type="password" x-model="adminCreds.pass"
-                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                placeholder="••••••••">
-                        </div>
-                        <button @click="verifyAdmin"
-                            class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2">
-                            Login to Dashboard <i class="fas fa-sign-in-alt text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-            </template>
-
-            <!-- Details Collection -->
-            <template x-if="authStep === 'details'">
-                <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
-                    <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i
-                            class="fas fa-id-card text-blue-500"></i> Register Profile</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Full
-                                Name</label>
-                            <input type="text" x-model="user.name"
-                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1.5 ml-1">Work Email
-                                ID</label>
-                            <input type="email" x-model="user.email" @blur="validateEmail"
-                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                placeholder="name@company.com">
-                        </div>
-                        <button @click="generateCode"
-                            class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2">
-                            Generate Access Code <i class="fas fa-arrow-right text-xs"></i>
-                        </button>
-                    </div>
-                </div>
-            </template>
-
-            <!-- Code Verification -->
-            <template x-if="authStep === 'code'">
-                <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl text-center">
-                    <div
-                        class="w-16 h-16 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i class="fas fa-envelope-open-text text-2xl"></i>
-                    </div>
-                    <h2 class="text-xl font-bold mb-2">Check Your Email</h2>
-                    <p class="text-sm text-slate-400 mb-8">A unique access code has been sent to <br><span
-                            class="text-blue-400" x-text="user.email"></span></p>
-
-                    <div class="mb-8 p-4 bg-slate-950 border border-slate-800 rounded-2xl">
-                        <div class="text-[10px] font-bold text-slate-600 uppercase mb-2">Access Code</div>
-                        <div class="text-3xl font-black tracking-widest text-emerald-400" x-text="generatedCode"></div>
-                        <div x-show="generatedCode === '********'" class="text-[10px] text-slate-500 mt-2 italic">Sent
-                            to your mailbox</div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <input type="text" x-model="enteredCode" placeholder="Enter Access Code"
-                            class="w-full text-center text-xl font-bold bg-slate-950 border border-slate-800 rounded-xl py-4 focus:ring-2 focus:ring-emerald-500 outline-none uppercase tracking-widest">
-                        <button @click="verifyAndLogin"
-                            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all">
-                            Verify & Access Lab
-                        </button>
-                    </div>
-                </div>
-            </template>
-        </div>
         </div>
     </div>
     <div x-show="isLoggedIn" class="h-screen flex flex-col" x-cloak>
@@ -567,17 +581,20 @@
                                     <span class="text-[9px] text-slate-600 font-bold"><i class="fas fa-award mr-1"></i>
                                         <span x-text="project.points"></span></span>
                                     <!-- Timer indicator for active problem -->
-                                    <span x-show="activeProject.id === project.id && problemStartTime && user.role === 'candidate'"
+                                    <span
+                                        x-show="activeProject.id === project.id && problemStartTime && user.role === 'candidate'"
                                         class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-md"
                                         :class="timerRemainingSeconds <= 60 ? 'bg-red-900/50 text-red-400' : timerRemainingSeconds <= 180 ? 'bg-amber-900/50 text-amber-400' : 'bg-slate-700 text-slate-400'">
                                         <i class="fas fa-clock"></i>
                                         <span x-text="timerDisplay"></span>
                                     </span>
                                     <!-- Violations badge for this problem -->
-                                    <span x-show="user.role === 'candidate' && violationLog.filter(v => v.problem === project.title).length > 0"
+                                    <span
+                                        x-show="user.role === 'candidate' && violationLog.filter(v => v.problem === project.title).length > 0"
                                         class="inline-flex items-center gap-1 text-[9px] font-black bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded-md">
                                         <i class="fas fa-exclamation-triangle"></i>
-                                        <span x-text="violationLog.filter(v => v.problem === project.title).length + ' violation' + (violationLog.filter(v => v.problem === project.title).length > 1 ? 's' : '')"></span>
+                                        <span
+                                            x-text="violationLog.filter(v => v.problem === project.title).length + ' violation' + (violationLog.filter(v => v.problem === project.title).length > 1 ? 's' : '')"></span>
                                     </span>
                                 </div>
                             </div>
@@ -624,6 +641,14 @@
 
                         <!-- Action Buttons -->
                         <div class="flex items-center gap-2 pr-4">
+                            <!-- Auto-save indicator -->
+                            <div x-show="autoSaveStatus && user.role === 'candidate'"
+                                class="flex items-center gap-1.5 text-[9px] font-bold px-2 py-1 rounded-lg"
+                                :class="autoSaveStatus === 'saved' ? 'text-emerald-400 bg-emerald-950/50' : 'text-slate-500'">
+                                <i class="fas"
+                                    :class="autoSaveStatus === 'saved' ? 'fa-check-circle' : 'fa-circle-notch fa-spin'"></i>
+                                <span x-text="autoSaveStatus === 'saved' ? 'Auto-saved' : 'Saving...'"></span>
+                            </div>
                             <button x-show="buildReport && user.role === 'admin'" @click="downloadLogs"
                                 class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center gap-2 border border-slate-700">
                                 <i class="fas fa-download"></i> Save Report
@@ -1148,7 +1173,7 @@
                             <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Pending
                                 Review</div>
                             <div class="text-4xl font-black text-amber-400"
-                                x-text="allSubmissions.filter(s => s.status === 'pending').length"></div>
+                                x-text="(allSubmissions || []).filter(s => s.status === 'pending').length"></div>
                             <div
                                 class="mt-4 flex items-center gap-2 text-[10px] font-bold text-amber-500 animate-pulse">
                                 <i class="fas fa-exclamation-circle"></i> Requires attention
@@ -1177,16 +1202,17 @@
                                                 </div>
                                                 <div>
                                                     <div class="text-sm font-bold text-white"
-                                                        x-text="sub.candidateName"></div>
+                                                        x-text="sub.candidate_name || '—'"></div>
                                                     <div class="text-[10px] text-slate-500"
-                                                        x-text="sub.projectTitle + ' • Day ' + sub.day"></div>
+                                                        x-text="(sub.project_title || '—') + ' • Day ' + sub.day"></div>
                                                 </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="text-[10px] font-black uppercase text-blue-400"
+                                                <div class="text-[10px] font-black uppercase"
+                                                    :class="sub.status === 'graded' ? 'text-emerald-400' : 'text-blue-400'"
                                                     x-text="sub.status"></div>
                                                 <div class="text-[9px] text-slate-600"
-                                                    x-text="new Date(sub.submittedAt).toLocaleTimeString()"></div>
+                                                    x-text="new Date(sub.submitted_at).toLocaleTimeString()"></div>
                                             </div>
                                         </div>
                                     </template>
@@ -1229,7 +1255,8 @@
                             <div>
                                 <h2 class="text-3xl font-black text-white tracking-tighter">Candidate <span
                                         class="text-emerald-500">Reports</span></h2>
-                                <p class="text-xs text-slate-500 mt-1">Detailed problem-wise reports with code, test results & violation logs.</p>
+                                <p class="text-xs text-slate-500 mt-1">Detailed problem-wise reports with code, test
+                                    results & violation logs.</p>
                             </div>
                             <div class="flex items-center gap-3">
                                 <!-- Download All Reports -->
@@ -1239,7 +1266,8 @@
                                 </button>
                                 <!-- Enhanced Search -->
                                 <div class="relative">
-                                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                    <i
+                                        class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
                                     <input type="text" x-model="adminSearch" placeholder="Search candidate..."
                                         class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 w-64 transition-all">
                                 </div>
@@ -1265,14 +1293,14 @@
                             </div>
                         </div>
 
-                        <div x-show="allSubmissions.filter(s => !adminSearch || s.candidateName.toLowerCase().includes(adminSearch.toLowerCase()) || s.email.toLowerCase().includes(adminSearch.toLowerCase())).length === 0"
+                        <div x-show="!filteredSubmissions || filteredSubmissions.length === 0"
                             class="text-center py-20 text-slate-600 bg-slate-900 border border-slate-800 rounded-3xl">
                             <i class="fas fa-clipboard-list text-5xl mb-4"></i>
                             <p class="text-lg font-bold">No matching submissions</p>
                             <p class="text-xs text-slate-700 mt-2">Try adjusting your filters or search query.</p>
                         </div>
 
-                        <div x-show="allSubmissions.length > 0"
+                        <div x-show="filteredSubmissions && filteredSubmissions.length > 0"
                             class="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
                             <table class="w-full text-left">
                                 <thead>
@@ -1295,21 +1323,21 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <template
-                                        x-for="sub in allSubmissions.filter(s => !adminSearch || s.candidateName.toLowerCase().includes(adminSearch.toLowerCase()) || s.email.toLowerCase().includes(adminSearch.toLowerCase()))"
-                                        :key="sub.id">
+                                    <template x-for="sub in filteredSubmissions" :key="sub.id">
                                         <tr
                                             class="border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors">
                                             <td class="px-5 py-4">
-                                                <div class="text-sm font-bold text-white" x-text="sub.candidateName">
+                                                <div class="text-sm font-bold text-white"
+                                                    x-text="sub.candidate_name || '—'">
                                                 </div>
                                                 <div class="text-[10px] text-slate-500" x-text="sub.email"></div>
                                             </td>
                                             <td class="px-5 py-4">
-                                                <div class="text-xs font-bold text-slate-300" x-text="sub.projectTitle">
+                                                <div class="text-xs font-bold text-slate-300"
+                                                    x-text="sub.project_title || '—'">
                                                 </div>
                                                 <div class="text-[10px] text-slate-500"
-                                                    x-text="'Day ' + sub.day + ' • ' + sub.topicName"></div>
+                                                    x-text="'Day ' + sub.day + ' • ' + (sub.topic_name || '')"></div>
                                             </td>
                                             <td class="px-5 py-4 text-xs text-slate-400 italic">
                                                 <div class="max-w-[200px] truncate" :title="sub.grade?.comments"
@@ -1320,7 +1348,7 @@
                                                     :class="sub.grade ? 'text-emerald-400' : 'text-slate-600'"
                                                     x-text="sub.grade ? sub.grade.compositeScore + '%' : '—'"></div>
                                                 <div class="text-[9px] text-slate-500"
-                                                    x-text="'Auto: ' + sub.autoScore + '%'"></div>
+                                                    x-text="'Auto: ' + (sub.auto_score || 0) + '%'"></div>
                                             </td>
                                             <td class="px-5 py-4 text-center">
                                                 <span class="text-[8px] font-black uppercase px-2 py-1 rounded-md"
@@ -1354,146 +1382,12 @@
                                 <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold"
                                     x-text="gradingSubmission?.projectTitle"></p>
                             </div>
-                            <button @click="downloadCandidateReport({ name: gradingSubmission.candidateName, email: gradingSubmission.email })"
+                            <button
+                                @click="downloadCandidateReport({ name: gradingSubmission.candidateName, email: gradingSubmission.email })"
                                 class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs transition-all flex items-center gap-2">
                                 <i class="fas fa-file-excel"></i> Download Excel Report
                             </button>
                         </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <!-- Code Viewer -->
-                            <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl h-[700px] flex flex-col">
-                                <div class="px-6 py-4 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
-                                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                        <i class="fas fa-terminal text-blue-400"></i> Submitted Source Code
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
-                                        <div class="w-3 h-3 rounded-full bg-amber-500/50"></div>
-                                        <div class="w-3 h-3 rounded-full bg-emerald-500/50"></div>
-                                    </div>
-                                </div>
-                                <div class="flex-1 overflow-hidden flex flex-col">
-                                    <template x-if="gradingDetail">
-                                        <div class="flex-1 flex flex-col overflow-hidden">
-                                            <template x-for="file in gradingDetail.code" :key="file.name">
-                                                <div class="flex-1 flex flex-col overflow-hidden">
-                                                    <div class="px-6 py-2 bg-slate-950/80 text-[10px] font-bold text-blue-400 flex items-center gap-2 border-b border-slate-800">
-                                                        <i class="fas fa-file-code"></i> <span x-text="file.name"></span>
-                                                    </div>
-                                                    <pre class="flex-1 p-6 text-xs code-font text-slate-300 overflow-auto bg-slate-950 custom-scrollbar leading-relaxed" x-text="file.content"></pre>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <div x-show="!gradingDetail" class="flex-1 flex items-center justify-center text-slate-600 bg-slate-950">
-                                        <div class="text-center">
-                                            <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-500/50"></i>
-                                            <p class="text-xs font-bold uppercase tracking-widest">Loading Code...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Detailed Report Panel -->
-                            <div class="space-y-4">
-                                <!-- Score & Test Results -->
-                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
-                                    <h4 class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-5 flex items-center gap-2">
-                                        <i class="fas fa-chart-bar"></i> Score & Test Results
-                                    </h4>
-                                    <div class="grid grid-cols-3 gap-4 mb-6">
-                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
-                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Auto Score</div>
-                                            <div class="text-3xl font-black text-blue-400" x-text="(gradingSubmission?.autoScore || 0) + '%'"></div>
-                                        </div>
-                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
-                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Tests</div>
-                                            <div class="text-3xl font-black text-emerald-400" x-text="(gradingSubmission?.testsPassed || 0) + '/' + (gradingSubmission?.testsTotal || 0)"></div>
-                                        </div>
-                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
-                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Violations</div>
-                                            <div class="text-3xl font-black" :class="(gradingSubmission?.violationCount || 0) > 0 ? 'text-red-400' : 'text-slate-500'" x-text="gradingSubmission?.violationCount || 0"></div>
-                                        </div>
-                                    </div>
-                                    <!-- Test case pass/fail breakdown -->
-                                    <div class="space-y-2">
-                                        <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Test Case Breakdown</div>
-                                        <template x-if="gradingDetail && gradingDetail.testResults">
-                                            <div class="space-y-2">
-                                                <template x-for="(t, i) in (typeof gradingDetail.testResults === 'string' ? JSON.parse(gradingDetail.testResults || '[]') : (gradingDetail.testResults || []))" :key="i">
-                                                    <div class="flex items-center justify-between bg-slate-950 px-4 py-2.5 rounded-xl">
-                                                        <div class="flex items-center gap-2">
-                                                            <i class="fas text-xs" :class="t.passed ? 'fa-check-circle text-emerald-400' : 'fa-times-circle text-red-400'"></i>
-                                                            <span class="text-xs text-slate-300 font-bold" x-text="t.name || ('Test ' + (i+1))"></span>
-                                                        </div>
-                                                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg"
-                                                            :class="t.passed ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'"
-                                                            x-text="t.passed ? 'PASS' : 'FAIL'"></span>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                        </template>
-                                        <div x-show="!gradingDetail" class="text-center py-4 text-slate-600 text-xs italic">Loading test results...</div>
-                                    </div>
-                                </div>
-
-                                <!-- Violation Log -->
-                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
-                                    <h4 class="text-xs font-black text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <i class="fas fa-shield-alt"></i> Violation Log
-                                    </h4>
-                                    <template x-if="gradingSubmission && gradingSubmission.violationCount > 0">
-                                        <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                            <template x-for="(v, i) in (typeof gradingSubmission.violationLog === 'string' ? JSON.parse(gradingSubmission.violationLog || '[]') : (gradingSubmission.violationLog || []))" :key="i">
-                                                <div class="flex items-start gap-2 bg-red-950/20 border border-red-900/30 px-3 py-2 rounded-xl">
-                                                    <i class="fas fa-exclamation-triangle text-red-400 text-[10px] mt-0.5"></i>
-                                                    <div>
-                                                        <div class="text-[10px] text-red-300 font-bold" x-text="v.reason"></div>
-                                                        <div class="text-[9px] text-slate-600" x-text="v.time + (v.problem ? ' — ' + v.problem : '')"></div>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <div x-show="!gradingSubmission || !gradingSubmission.violationCount" class="text-center py-4 text-slate-600 text-xs italic">
-                                        <i class="fas fa-check-circle text-emerald-500 mr-2"></i> No violations recorded
-                                    </div>
-                                </div>
-
-                                <!-- Submission Info -->
-                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
-                                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <i class="fas fa-info-circle"></i> Submission Info
-                                    </h4>
-                                    <div class="space-y-2 text-xs">
-                                        <div class="flex justify-between py-1 border-b border-slate-800">
-                                            <span class="text-slate-500 font-bold">Candidate</span>
-                                            <span class="text-white font-bold" x-text="gradingSubmission?.candidateName"></span>
-                                        </div>
-                                        <div class="flex justify-between py-1 border-b border-slate-800">
-                                            <span class="text-slate-500 font-bold">Email</span>
-                                            <span class="text-blue-400" x-text="gradingSubmission?.email"></span>
-                                        </div>
-                                        <div class="flex justify-between py-1 border-b border-slate-800">
-                                            <span class="text-slate-500 font-bold">Problem</span>
-                                            <span class="text-slate-300" x-text="gradingSubmission?.projectTitle"></span>
-                                        </div>
-                                        <div class="flex justify-between py-1 border-b border-slate-800">
-                                            <span class="text-slate-500 font-bold">Submitted</span>
-                                            <span class="text-slate-300" x-text="gradingSubmission?.submittedAt ? new Date(gradingSubmission.submittedAt).toLocaleString() : '—'"></span>
-                                        </div>
-                                        <div class="flex justify-between py-1">
-                                            <span class="text-slate-500 font-bold">Status</span>
-                                            <span class="font-black uppercase text-[10px] px-2 py-0.5 rounded-lg"
-                                                :class="gradingSubmission?.status === 'graded' ? 'bg-emerald-900/40 text-emerald-400' : 'bg-amber-900/40 text-amber-400'"
-                                                x-text="gradingSubmission?.status"></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <!-- Code Viewer -->
@@ -1503,7 +1397,7 @@
                                     class="px-6 py-4 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
                                     <div
                                         class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                        <i class="fas fa-terminal text-blue-400"></i> Source Code Artifacts
+                                        <i class="fas fa-terminal text-blue-400"></i> Submitted Source Code
                                     </div>
                                     <div class="flex gap-2">
                                         <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
@@ -1531,14 +1425,186 @@
                                         class="flex-1 flex items-center justify-center text-slate-600 bg-slate-950">
                                         <div class="text-center">
                                             <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-500/50"></i>
-                                            <p class="text-xs font-bold uppercase tracking-widest">Hydrating Source...
-                                            </p>
+                                            <p class="text-xs font-bold uppercase tracking-widest">Loading Code...</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Grading Controls -->
+                            <!-- Detailed Report Panel -->
+                            <div class="space-y-4">
+                                <!-- Score & Test Results -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4
+                                        class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                                        <i class="fas fa-chart-bar"></i> Score & Test Results
+                                    </h4>
+                                    <div class="grid grid-cols-3 gap-4 mb-6">
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Auto Score
+                                            </div>
+                                            <div class="text-3xl font-black text-blue-400"
+                                                x-text="(gradingSubmission?.autoScore || 0) + '%'"></div>
+                                        </div>
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Tests</div>
+                                            <div class="text-3xl font-black text-emerald-400"
+                                                x-text="(gradingSubmission?.testsPassed || 0) + '/' + (gradingSubmission?.testsTotal || 0)">
+                                            </div>
+                                        </div>
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Violations
+                                            </div>
+                                            <div class="text-3xl font-black"
+                                                :class="(gradingSubmission?.violationCount || 0) > 0 ? 'text-red-400' : 'text-slate-500'"
+                                                x-text="gradingSubmission?.violationCount || 0"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Test case pass/fail breakdown -->
+                                    <div class="space-y-2">
+                                        <div
+                                            class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
+                                            Test Case Breakdown</div>
+                                        <template x-if="gradingDetail && gradingDetail.testResults">
+                                            <div class="space-y-2">
+                                                <template
+                                                    x-for="(t, i) in (typeof gradingDetail.testResults === 'string' ? JSON.parse(gradingDetail.testResults || '[]') : (gradingDetail.testResults || []))"
+                                                    :key="i">
+                                                    <div
+                                                        class="flex items-center justify-between bg-slate-950 px-4 py-2.5 rounded-xl">
+                                                        <div class="flex items-center gap-2">
+                                                            <i class="fas text-xs"
+                                                                :class="t.passed ? 'fa-check-circle text-emerald-400' : 'fa-times-circle text-red-400'"></i>
+                                                            <span class="text-xs text-slate-300 font-bold"
+                                                                x-text="t.name || ('Test ' + (i+1))"></span>
+                                                        </div>
+                                                        <span
+                                                            class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg"
+                                                            :class="t.passed ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'"
+                                                            x-text="t.passed ? 'PASS' : 'FAIL'"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <div x-show="!gradingDetail"
+                                            class="text-center py-4 text-slate-600 text-xs italic">Loading test
+                                            results...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Violation Log -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4
+                                        class="text-xs font-black text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i class="fas fa-shield-alt"></i> Violation Log
+                                    </h4>
+                                    <template x-if="gradingSubmission && gradingSubmission.violationCount > 0">
+                                        <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                            <template
+                                                x-for="(v, i) in (typeof gradingSubmission.violationLog === 'string' ? JSON.parse(gradingSubmission.violationLog || '[]') : (gradingSubmission.violationLog || []))"
+                                                :key="i">
+                                                <div
+                                                    class="flex items-start gap-2 bg-red-950/20 border border-red-900/30 px-3 py-2 rounded-xl">
+                                                    <i
+                                                        class="fas fa-exclamation-triangle text-red-400 text-[10px] mt-0.5"></i>
+                                                    <div>
+                                                        <div class="text-[10px] text-red-300 font-bold"
+                                                            x-text="v.reason"></div>
+                                                        <div class="text-[9px] text-slate-600"
+                                                            x-text="v.time + (v.problem ? ' — ' + v.problem : '')">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div x-show="!gradingSubmission || !gradingSubmission.violationCount"
+                                        class="text-center py-4 text-slate-600 text-xs italic">
+                                        <i class="fas fa-check-circle text-emerald-500 mr-2"></i> No violations recorded
+                                    </div>
+                                </div>
+
+                                <!-- Submission Info -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4
+                                        class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i class="fas fa-info-circle"></i> Submission Info
+                                    </h4>
+                                    <div class="space-y-2 text-xs">
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Candidate</span>
+                                            <span class="text-white font-bold"
+                                                x-text="gradingSubmission?.candidateName"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Email</span>
+                                            <span class="text-blue-400" x-text="gradingSubmission?.email"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Problem</span>
+                                            <span class="text-slate-300"
+                                                x-text="gradingSubmission?.projectTitle"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Submitted</span>
+                                            <span class="text-slate-300"
+                                                x-text="gradingSubmission?.submittedAt ? new Date(gradingSubmission.submittedAt).toLocaleString() : '—'"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1">
+                                            <span class="text-slate-500 font-bold">Status</span>
+                                            <span class="font-black uppercase text-[10px] px-2 py-0.5 rounded-lg"
+                                                :class="gradingSubmission?.status === 'graded' ? 'bg-emerald-900/40 text-emerald-400' : 'bg-amber-900/40 text-amber-400'"
+                                                x-text="gradingSubmission?.status"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Code Viewer -->
+                        <div
+                            class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl h-[700px] flex flex-col">
+                            <div
+                                class="px-6 py-4 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
+                                <div
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    <i class="fas fa-terminal text-blue-400"></i> Source Code Artifacts
+                                </div>
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                                    <div class="w-3 h-3 rounded-full bg-amber-500/50"></div>
+                                    <div class="w-3 h-3 rounded-full bg-emerald-500/50"></div>
+                                </div>
+                            </div>
+                            <div class="flex-1 overflow-hidden flex flex-col">
+                                <template x-if="gradingDetail">
+                                    <div class="flex-1 flex flex-col overflow-hidden">
+                                        <template x-for="file in gradingDetail.code" :key="file.name">
+                                            <div class="flex-1 flex flex-col overflow-hidden">
+                                                <div
+                                                    class="px-6 py-2 bg-slate-950/80 text-[10px] font-bold text-blue-400 flex items-center gap-2 border-b border-slate-800">
+                                                    <i class="fas fa-file-code"></i> <span x-text="file.name"></span>
+                                                </div>
+                                                <pre class="flex-1 p-6 text-xs code-font text-slate-300 overflow-auto bg-slate-950 custom-scrollbar leading-relaxed"
+                                                    x-text="file.content"></pre>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <div x-show="!gradingDetail"
+                                    class="flex-1 flex items-center justify-center text-slate-600 bg-slate-950">
+                                    <div class="text-center">
+                                        <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-500/50"></i>
+                                        <p class="text-xs font-bold uppercase tracking-widest">Hydrating Source...
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grading Controls -->
                     </div>
                 </div>
 
@@ -1636,64 +1702,69 @@
             </div>
         </div>
 
-    <!-- Tab: Course Visibility Controls -->
-                <div x-show="adminTab === 'courses'" x-transition class="space-y-8">
-                    <div>
-                        <h2 class="text-3xl font-black text-white tracking-tighter">Course <span class="text-violet-500">Visibility</span></h2>
-                        <p class="text-xs text-slate-500 mt-1">Enable or disable courses for all participants on the platform.</p>
-                    </div>
+        <!-- Tab: Course Visibility Controls -->
+        <div x-show="adminTab === 'courses'" x-transition class="space-y-8">
+            <div>
+                <h2 class="text-3xl font-black text-white tracking-tighter">Course <span
+                        class="text-violet-500">Visibility</span></h2>
+                <p class="text-xs text-slate-500 mt-1">Enable or disable courses for all participants on the platform.
+                </p>
+            </div>
 
-                    <!-- Loading state -->
-                    <div x-show="topicLoadError" class="bg-red-900/30 border border-red-700/40 rounded-2xl p-6 text-red-400 text-sm">
-                        <i class="fas fa-exclamation-triangle mr-2"></i> Failed to load topics. Make sure the server is running and try again.
-                    </div>
+            <!-- Loading state -->
+            <div x-show="topicLoadError"
+                class="bg-red-900/30 border border-red-700/40 rounded-2xl p-6 text-red-400 text-sm">
+                <i class="fas fa-exclamation-triangle mr-2"></i> Failed to load topics. Make sure the server is running
+                and try again.
+            </div>
 
-                    <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-                        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
-                            <div class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                <i class="fas fa-toggle-on text-violet-500"></i> Available Courses
-                            </div>
-                            <div class="text-[10px] text-slate-600" x-text="Object.keys(topicVisibility).length + ' courses total'"></div>
-                        </div>
-                        <div class="divide-y divide-slate-800">
-                            <template x-for="[name, enabled] in Object.entries(topicVisibility)" :key="name">
-                                <div class="flex items-center justify-between px-6 py-4 hover:bg-slate-800/40 transition-all">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center"
-                                            :class="enabled ? 'bg-violet-600/20 text-violet-400' : 'bg-slate-800 text-slate-600'">
-                                            <i class="fas" :class="enabled ? 'fa-book-open' : 'fa-book'"></i>
-                                        </div>
-                                        <div>
-                                            <div class="text-sm font-bold text-white" x-text="name"></div>
-                                            <div class="text-[10px] mt-0.5" :class="enabled ? 'text-emerald-400' : 'text-slate-600'"
-                                                x-text="enabled ? 'Visible to participants' : 'Hidden from participants'"></div>
-                                        </div>
-                                    </div>
-                                    <button
-                                        @click="toggleTopic(name, !enabled)"
-                                        :disabled="topicSaving === name"
-                                        class="relative inline-flex items-center w-12 h-6 rounded-full transition-all duration-300 focus:outline-none disabled:opacity-50"
-                                        :class="enabled ? 'bg-violet-600' : 'bg-slate-700'">
-                                        <span class="inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300"
-                                            :class="enabled ? 'translate-x-6' : 'translate-x-1'"></span>
-                                    </button>
-                                </div>
-                            </template>
-                            <template x-if="Object.keys(topicVisibility).length === 0">
-                                <div class="text-center py-10 text-slate-600 italic text-xs">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading courses...
-                                </div>
-                            </template>
-                        </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+                <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                    <div class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-toggle-on text-violet-500"></i> Available Courses
                     </div>
-
-                    <!-- Save status toast (inline) -->
-                    <div x-show="topicSaveMsg" x-transition
-                        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-violet-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold flex items-center gap-2">
-                        <i class="fas fa-check-circle"></i>
-                        <span x-text="topicSaveMsg"></span>
-                    </div>
+                    <div class="text-[10px] text-slate-600"
+                        x-text="Object.keys(topicVisibility).length + ' courses total'"></div>
                 </div>
+                <div class="divide-y divide-slate-800">
+                    <template x-for="[name, enabled] in Object.entries(topicVisibility)" :key="name">
+                        <div class="flex items-center justify-between px-6 py-4 hover:bg-slate-800/40 transition-all">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                    :class="enabled ? 'bg-violet-600/20 text-violet-400' : 'bg-slate-800 text-slate-600'">
+                                    <i class="fas" :class="enabled ? 'fa-book-open' : 'fa-book'"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-white" x-text="name"></div>
+                                    <div class="text-[10px] mt-0.5"
+                                        :class="enabled ? 'text-emerald-400' : 'text-slate-600'"
+                                        x-text="enabled ? 'Visible to participants' : 'Hidden from participants'"></div>
+                                </div>
+                            </div>
+                            <button @click="toggleTopic(name, !enabled)" :disabled="topicSaving === name"
+                                class="relative inline-flex items-center w-12 h-6 rounded-full transition-all duration-300 focus:outline-none disabled:opacity-50"
+                                :class="enabled ? 'bg-violet-600' : 'bg-slate-700'">
+                                <span
+                                    class="inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300"
+                                    :class="enabled ? 'translate-x-6' : 'translate-x-1'"></span>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="Object.keys(topicVisibility).length === 0">
+                        <div class="text-center py-10 text-slate-600 italic text-xs">
+                            <i class="fas fa-spinner fa-spin mr-2"></i> Loading courses...
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Save status toast (inline) -->
+            <div x-show="topicSaveMsg" x-transition
+                class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-violet-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold flex items-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                <span x-text="topicSaveMsg"></span>
+            </div>
+        </div>
 
     </div>
     </div>
@@ -1768,13 +1839,15 @@
     <!-- ── Timer Expired Modal ── -->
     <div x-show="problemTimerExpired && user.role === 'candidate'" x-cloak
         class="fixed inset-0 z-[500] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6">
-        <div class="bg-slate-900 border border-red-700/50 rounded-3xl p-10 max-w-md w-full text-center shadow-2xl shadow-red-900/30">
+        <div
+            class="bg-slate-900 border border-red-700/50 rounded-3xl p-10 max-w-md w-full text-center shadow-2xl shadow-red-900/30">
             <div class="w-20 h-20 bg-red-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="fas fa-hourglass-end text-4xl text-red-400"></i>
             </div>
             <h2 class="text-2xl font-black text-white mb-2">Time's Up!</h2>
             <p class="text-sm text-slate-400 mb-2">Your allocated time for this problem has expired.</p>
-            <p class="text-xs text-slate-500 mb-8">You can move to the next problem — any banked time from previous problems has been used.</p>
+            <p class="text-xs text-slate-500 mb-8">You can move to the next problem — any banked time from previous
+                problems has been used.</p>
             <div class="flex gap-3">
                 <button @click="problemTimerExpired = false; startProblemTimer()"
                     class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3 rounded-xl font-bold text-sm transition-all">
@@ -2142,6 +2215,9 @@
                 isGrading: false,
                 // Anti-Cheat / Proctoring
                 violationCount: 0,
+                autoSaveStatus: '',        // '' | 'saving' | 'saved' | 'error'
+                autoSaveTimer: null,
+                _autoSaveTimer: null,
                 violationWarning: false,
                 criticalViolationWarning: false,
                 violationLog: [],
@@ -3242,6 +3318,17 @@
                         .reduce((sum, p) => sum + p.points, 0);
                 },
 
+                get filteredSubmissions() {
+                    const q = (this.adminSearch || '').toLowerCase().trim();
+                    return this.allSubmissions.filter(s => {
+                        if (!q) return true;
+                        const name = (s.candidate_name || '').toLowerCase();
+                        const email = (s.email || '').toLowerCase();
+                        const title = (s.project_title || '').toLowerCase();
+                        return name.includes(q) || email.includes(q) || title.includes(q);
+                    });
+                },
+
                 getFileIcon(name) {
                     return name.endsWith('.hpp') || name.endsWith('.h') ? 'fa-file-medical text-amber-500' : 'fa-file-code text-blue-500';
                 },
@@ -3284,6 +3371,18 @@
                             EditorView.updateListener.of((update) => {
                                 if (update.docChanged && this.activeFiles[this.activeFileIdx]) {
                                     this.activeFiles[this.activeFileIdx].content = update.state.doc.toString();
+                                    // Debounced auto-save: 2s after user stops typing
+                                    clearTimeout(this._autoSaveTimer);
+                                    this._autoSaveTimer = setTimeout(() => {
+                                        if (this.isLoggedIn && this.activeProject) {
+                                            // Save to localStorage immediately
+                                            localStorage.setItem('code_' + this.activeProject.id, JSON.stringify(this.activeFiles));
+                                            // Save to server in background
+                                            const isSolved = this.solvedProjectIds.includes(this.activeProject.id);
+                                            this._saveProgressToServer(this.activeProject.id, this.activeFiles, isSolved);
+                                            this._showAutoSaveIndicator();
+                                        }
+                                    }, 2000);
                                 }
                             })
                         ],
@@ -3816,6 +3915,12 @@
                     }
                 },
 
+                _showAutoSaveIndicator() {
+                    this.autoSaveStatus = 'saved';
+                    clearTimeout(this.autoSaveTimer);
+                    this.autoSaveTimer = setTimeout(() => { this.autoSaveStatus = ''; }, 3000);
+                },
+
                 // ── Problem Timer Pool ────────────────────────────────────
                 startProblemTimer() {
                     this.stopProblemTimer();
@@ -3870,7 +3975,7 @@
                     const s = this.timerRemainingSeconds;
                     const m = Math.floor(s / 60);
                     const sec = s % 60;
-                    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2,'0');
+                    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
                 },
 
                 get timerColor() {
@@ -3911,7 +4016,7 @@
                     const candidateMap = {};
                     submissions.forEach(s => {
                         const email = s.email;
-                        const name = f(s,'candidateName','candidate_name') || email;
+                        const name = f(s, 'candidateName', 'candidate_name') || email;
                         if (!candidateMap[email]) candidateMap[email] = { name, email, subs: [] };
                         candidateMap[email].subs.push(s);
                     });
@@ -3930,14 +4035,14 @@
 
                     const ranked = candidates.map(c => {
                         const subs = c.subs;
-                        const totalTests = subs.reduce((a, s) => a + (f(s,'testsTotal','tests_total') || 0), 0);
-                        const passedTests = subs.reduce((a, s) => a + (f(s,'testsPassed','tests_passed') || 0), 0);
-                        const avgScore = subs.length ? Math.round(subs.reduce((a, s) => a + (f(s,'autoScore','auto_score') || 0), 0) / subs.length) : 0;
-                        const totalViolations = subs.reduce((a, s) => a + (f(s,'violationCount','violation_count') || 0), 0);
+                        const totalTests = subs.reduce((a, s) => a + (f(s, 'testsTotal', 'tests_total') || 0), 0);
+                        const passedTests = subs.reduce((a, s) => a + (f(s, 'testsPassed', 'tests_passed') || 0), 0);
+                        const avgScore = subs.length ? Math.round(subs.reduce((a, s) => a + (f(s, 'autoScore', 'auto_score') || 0), 0) / subs.length) : 0;
+                        const totalViolations = subs.reduce((a, s) => a + (f(s, 'violationCount', 'violation_count') || 0), 0);
 
                         let tabSwitches = 0, copyPaste = 0;
                         subs.forEach(s => {
-                            const vlog = this._parseViolationLog(f(s,'violationLog','violation_log'));
+                            const vlog = this._parseViolationLog(f(s, 'violationLog', 'violation_log'));
                             tabSwitches += vlog.filter(v => v.reason && (v.reason.includes('Tab switch') || v.reason.includes('focus lost'))).length;
                             copyPaste += vlog.filter(v => v.reason && (v.reason.includes('Copy') || v.reason.includes('Paste') || v.reason.includes('Cut'))).length;
                         });
@@ -3981,19 +4086,19 @@
                     ]];
 
                     submissions.forEach(s => {
-                        const vlog = this._parseViolationLog(f(s,'violationLog','violation_log'));
-                        const title_ = f(s,'projectTitle','project_title') || f(s,'projectId','project_id');
+                        const vlog = this._parseViolationLog(f(s, 'violationLog', 'violation_log'));
+                        const title_ = f(s, 'projectTitle', 'project_title') || f(s, 'projectId', 'project_id');
                         const probViolations = vlog.filter(v => v.problem === title_).length;
-                        const totalTests = f(s,'testsTotal','tests_total') || 0;
-                        const passedTests = f(s,'testsPassed','tests_passed') || 0;
+                        const totalTests = f(s, 'testsTotal', 'tests_total') || 0;
+                        const passedTests = f(s, 'testsPassed', 'tests_passed') || 0;
                         const passRate = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
-                        const submittedAt = f(s,'submittedAt','submitted_at');
+                        const submittedAt = f(s, 'submittedAt', 'submitted_at');
                         probRows.push([
-                            f(s,'candidateName','candidate_name') || s.email,
+                            f(s, 'candidateName', 'candidate_name') || s.email,
                             s.email,
-                            f(s,'projectId','project_id') || '—',
+                            f(s, 'projectId', 'project_id') || '—',
                             title_ || '—',
-                            f(s,'autoScore','auto_score') || 0,
+                            f(s, 'autoScore', 'auto_score') || 0,
                             passedTests,
                             totalTests,
                             passRate + '%',
@@ -4019,18 +4124,18 @@
                     ]];
 
                     submissions.forEach(s => {
-                        const tests = this._parseJson(f(s,'testResults','test_results'));
-                        const title_ = f(s,'projectTitle','project_title') || f(s,'projectId','project_id');
+                        const tests = this._parseJson(f(s, 'testResults', 'test_results'));
+                        const title_ = f(s, 'projectTitle', 'project_title') || f(s, 'projectId', 'project_id');
                         if (!tests || !tests.length) {
                             testRows.push([
-                                f(s,'candidateName','candidate_name') || s.email, s.email,
+                                f(s, 'candidateName', 'candidate_name') || s.email, s.email,
                                 title_, '—', 'No test data', '—', '—'
                             ]);
                             return;
                         }
                         tests.forEach(t => {
                             testRows.push([
-                                f(s,'candidateName','candidate_name') || s.email,
+                                f(s, 'candidateName', 'candidate_name') || s.email,
                                 s.email,
                                 title_,
                                 t.name || '—',
@@ -4058,7 +4163,7 @@
 
                     let hasViolations = false;
                     submissions.forEach(s => {
-                        const vlog = this._parseViolationLog(f(s,'violationLog','violation_log'));
+                        const vlog = this._parseViolationLog(f(s, 'violationLog', 'violation_log'));
                         if (!vlog.length) return;
                         hasViolations = true;
                         vlog.forEach((v, i) => {
@@ -4068,12 +4173,12 @@
                             if (reason.includes('Copy') || reason.includes('Paste') || reason.includes('Cut')) severity = 'High';
                             if (reason.includes('DevTools')) severity = 'Critical';
                             violRows.push([
-                                f(s,'candidateName','candidate_name') || s.email,
+                                f(s, 'candidateName', 'candidate_name') || s.email,
                                 s.email,
                                 i + 1,
                                 v.time || '—',
                                 reason,
-                                v.problem || f(s,'projectTitle','project_title') || '—',
+                                v.problem || f(s, 'projectTitle', 'project_title') || '—',
                                 severity
                             ]);
                         });
