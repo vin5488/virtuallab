@@ -361,18 +361,12 @@ function requireAdmin(req, res, next) {
 // HEALTH CHECK
 // ══════════════════════════════════════════════════════
 app.get('/health', (req, res) => {
-    let submissionCount = 0, userCount = 0;
-    try {
-        submissionCount = db.prepare('SELECT COUNT(*) as c FROM submissions').get().c;
-        userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
-    } catch(e) {}
     res.json({
         status: 'ok',
         worker: WORKER_ID,
-        uptime: Math.round(process.uptime()),
-        db: DB_PATH,
-        submissions: submissionCount,
-        users: userCount
+        compileQueue: compileQueue.stats,
+        uptime: process.uptime(),
+        db: 'sqlite'
     });
 });
 
@@ -713,37 +707,12 @@ app.get('/api/submissions', requireAdmin, (req, res) => {
 
     query += ' ORDER BY submitted_at DESC';
 
-    try {
-        const rows = db.prepare(query).all(...params);
-        const result = rows.map(r => ({
-            ...r,
-            grade: r.grade ? JSON.parse(r.grade) : null
-        }));
-        res.json(result);
-    } catch(e) {
-        console.error('[Submissions] Query error:', e.message);
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// GET /api/admin/db-stats — DB diagnostics (admin only, free tier friendly)
-app.get('/api/admin/db-stats', requireAdmin, (req, res) => {
-    try {
-        const submissionCount = db.prepare('SELECT COUNT(*) as total FROM submissions').get();
-        const userCount = db.prepare("SELECT COUNT(*) as total FROM users WHERE role='candidate'").get();
-        const progressCount = db.prepare('SELECT COUNT(*) as total FROM progress WHERE solved=1').get();
-        const recent = db.prepare(`SELECT id, candidate_name, email, project_title, submitted_at, status
-                                   FROM submissions ORDER BY submitted_at DESC LIMIT 20`).all();
-        const byStatus = db.prepare(`SELECT status, COUNT(*) as count FROM submissions GROUP BY status`).all();
-        res.json({
-            submissions: { total: submissionCount.total, byStatus, recent },
-            candidates: userCount.total,
-            solvedProblems: progressCount.total,
-            dbPath: process.env.DB_PATH || 'default'
-        });
-    } catch(e) {
-        res.status(500).json({ error: e.message });
-    }
+    const rows = db.prepare(query).all(...params);
+    const result = rows.map(r => ({
+        ...r,
+        grade: r.grade ? JSON.parse(r.grade) : null
+    }));
+    res.json(result);
 });
 
 // GET /api/submission/:id — Full detail of one submission (admin only)

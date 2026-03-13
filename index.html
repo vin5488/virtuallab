@@ -624,13 +624,6 @@
 
                         <!-- Action Buttons -->
                         <div class="flex items-center gap-2 pr-4">
-                            <!-- Auto-save indicator -->
-                            <div x-show="autoSaveStatus && user.role === 'candidate'"
-                                class="flex items-center gap-1.5 text-[9px] font-bold px-2 py-1 rounded-lg"
-                                :class="autoSaveStatus === 'saved' ? 'text-emerald-400 bg-emerald-950/50' : 'text-slate-500'">
-                                <i class="fas" :class="autoSaveStatus === 'saved' ? 'fa-check-circle' : 'fa-circle-notch fa-spin'"></i>
-                                <span x-text="autoSaveStatus === 'saved' ? 'Auto-saved' : 'Saving...'"></span>
-                            </div>
                             <button x-show="buildReport && user.role === 'admin'" @click="downloadLogs"
                                 class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center gap-2 border border-slate-700">
                                 <i class="fas fa-download"></i> Save Report
@@ -641,7 +634,7 @@
                                 <span x-text="isBuilding ? 'Building...' : 'Compile & Run Tests'"></span>
                             </button>
                             <button x-show="buildReport && buildReport.success && testResults.length > 0"
-                                @click="checkOffDayThenSubmit()"
+                                @click="showSubmitModal = true"
                                 class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center gap-2 shadow-lg shadow-emerald-900/20">
                                 <i class="fas fa-paper-plane"></i> Submit Assignment
                             </button>
@@ -1091,15 +1084,22 @@
                         <button @click="adminTab = 'overview'"
                             :class="adminTab === 'overview' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500 hover:text-slate-300'"
                             class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
-                            <i class="fas fa-chart-line mr-1"></i> Overview
+                            Overview
                         </button>
                         <button @click="adminTab = 'submissions'; loadAllSubmissions()"
                             :class="adminTab === 'submissions' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'text-slate-500 hover:text-slate-300'"
                             class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
-                            <i class="fas fa-inbox mr-1"></i> Submissions
-                            <span x-show="allSubmissions.filter(s=>s.status==='pending').length > 0"
-                                class="ml-1.5 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full"
-                                x-text="allSubmissions.filter(s=>s.status==='pending').length"></span>
+                            Submissions
+                        </button>
+                        <button @click="adminTab = 'analytics'"
+                            :class="adminTab === 'analytics' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-500 hover:text-slate-300'"
+                            class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                            Analytics Hub
+                        </button>
+                        <button @click="adminTab = 'courses'; loadTopicVisibility()"
+                            :class="adminTab === 'courses' ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40' : 'text-slate-500 hover:text-slate-300'"
+                            class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
+                            <i class="fas fa-book-open mr-1"></i> Courses
                         </button>
                     </nav>
                 </div>
@@ -1110,258 +1110,228 @@
                 <!-- Tab: Overview (The "WOW" Dashboard) -->
                 <div x-show="adminTab === 'overview'" x-transition class="space-y-10">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Stat Card 1 -->
-                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-blue-500/50 transition-all shadow-2xl">
-                            <div class="absolute -right-4 -top-4 text-blue-500/10 text-7xl group-hover:scale-110 transition-transform"><i class="fas fa-users"></i></div>
-                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Candidates</div>
-                            <div class="text-4xl font-black text-white" x-text="candidates.length || 0"></div>
-                            <div class="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                                <i class="fas fa-user-check text-emerald-400"></i>
-                                <span x-text="candidates.filter(c=>c.submission_count>0).length + ' active'"></span>
+                        <!-- Stat Card 1 -->
+                        <div
+                            class="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-blue-500/50 transition-all shadow-2xl">
+                            <div
+                                class="absolute -right-4 -top-4 text-blue-500/10 text-7xl group-hover:scale-110 transition-transform">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total
+                                Candidates</div>
+                            <div class="text-4xl font-black text-white" x-text="candidates.length"></div>
+                            <div class="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-400">
+                                <i class="fas fa-arrow-up"></i> 12% from last week
                             </div>
                         </div>
                         <!-- Stat Card 2 -->
-                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-emerald-500/50 transition-all shadow-2xl">
-                            <div class="absolute -right-4 -top-4 text-emerald-500/10 text-7xl group-hover:scale-110 transition-transform"><i class="fas fa-cloud-upload-alt"></i></div>
-                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Submissions</div>
-                            <div class="text-4xl font-black text-white" x-text="allSubmissions.length || 0"></div>
-                            <div class="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-400">
-                                <i class="fas fa-check-circle"></i>
-                                <span x-text="allSubmissions.filter(s=>s.status==='graded').length + ' graded'"></span>
+                        <div
+                            class="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-emerald-500/50 transition-all shadow-2xl">
+                            <div
+                                class="absolute -right-4 -top-4 text-emerald-500/10 text-7xl group-hover:scale-110 transition-transform">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total
+                                Submissions</div>
+                            <div class="text-4xl font-black text-white" x-text="allSubmissions.length"></div>
+                            <div class="mt-4 flex items-center gap-2 text-[10px] font-bold text-blue-400">
+                                <i class="fas fa-sync-alt fa-spin"></i> Real-time tracking
                             </div>
                         </div>
                         <!-- Stat Card 3 -->
-                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-amber-500/50 transition-all shadow-2xl cursor-pointer"
-                            @click="adminTab='submissions'; adminSubFilter='pending'; loadAllSubmissions()">
-                            <div class="absolute -right-4 -top-4 text-amber-500/10 text-7xl group-hover:scale-110 transition-transform"><i class="fas fa-clock"></i></div>
-                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Pending Review</div>
-                            <div class="text-4xl font-black text-amber-400" x-text="allSubmissions.filter(s=>s.status==='pending').length"></div>
-                            <div x-show="allSubmissions.filter(s=>s.status==='pending').length > 0"
+                        <div
+                            class="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-amber-500/50 transition-all shadow-2xl">
+                            <div
+                                class="absolute -right-4 -top-4 text-amber-500/10 text-7xl group-hover:scale-110 transition-transform">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Pending
+                                Review</div>
+                            <div class="text-4xl font-black text-amber-400"
+                                x-text="allSubmissions.filter(s => s.status === 'pending').length"></div>
+                            <div
                                 class="mt-4 flex items-center gap-2 text-[10px] font-bold text-amber-500 animate-pulse">
-                                <i class="fas fa-exclamation-circle"></i> Click to review
-                            </div>
-                            <div x-show="allSubmissions.filter(s=>s.status==='pending').length === 0"
-                                class="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                                <i class="fas fa-check text-emerald-400"></i> All reviewed
+                                <i class="fas fa-exclamation-circle"></i> Requires attention
                             </div>
                         </div>
-                        <!-- Stat Card 4 -->
-                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-red-500/50 transition-all shadow-2xl">
-                            <div class="absolute -right-4 -top-4 text-red-500/10 text-7xl group-hover:scale-110 transition-transform"><i class="fas fa-exclamation-triangle"></i></div>
-                            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Violations</div>
-                            <div class="text-4xl font-black text-red-400" x-text="allSubmissions.reduce((a,s)=>a+(s.violation_count||0),0)"></div>
-                            <div class="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                                <i class="fas fa-shield-alt text-red-400"></i>
-                                <span x-text="allSubmissions.filter(s=>(s.violation_count||0)>5).length + ' high-risk'"></span>
-                            </div>
-                        </div>
+
                     </div>
 
-                    <!-- Loading spinner for overview -->
-                    <div x-show="submissionsLoading" class="flex items-center justify-center py-12">
-                        <i class="fas fa-circle-notch fa-spin text-blue-400 text-2xl mr-3"></i>
-                        <span class="text-slate-400 text-sm">Loading dashboard data...</span>
-                    </div>
-
-                    <div x-show="!submissionsLoading" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <!-- Recent Submissions -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <!-- Recent Activity -->
                         <div class="lg:col-span-2 space-y-4">
-                            <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 ml-1">
-                                <i class="fas fa-history text-blue-500"></i> Recent Submissions
+                            <h3
+                                class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 ml-1">
+                                <i class="fas fa-history text-blue-500"></i> Recent Platform Activity
                             </h3>
                             <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-                                <div class="p-6 space-y-3">
-                                    <template x-for="sub in allSubmissions.slice(0,8)" :key="sub.id">
-                                        <div class="flex items-center justify-between group cursor-pointer p-3 rounded-2xl hover:bg-slate-800/50 transition-all"
-                                            @click="adminTab='submissions'; openGrading(sub)">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-9 h-9 rounded-xl flex items-center justify-center"
-                                                    :class="sub.status==='graded' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-amber-600/20 text-amber-400'">
-                                                    <i class="fas text-sm" :class="sub.status==='graded' ? 'fa-check-double' : 'fa-clock'"></i>
+                                <div class="p-6 space-y-6">
+                                    <template x-for="sub in allSubmissions.slice(0, 5)" :key="sub.id">
+                                        <div class="flex items-center justify-between group cursor-pointer"
+                                            @click="adminTab = 'submissions'; openGrading(sub)">
+                                            <div class="flex items-center gap-4">
+                                                <div
+                                                    class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                                    <i class="fas"
+                                                        :class="sub.status === 'graded' ? 'fa-check-double text-emerald-400' : 'fa-clock text-amber-400'"></i>
                                                 </div>
                                                 <div>
-                                                    <div class="text-sm font-bold text-white" x-text="sub.candidate_name || '—'"></div>
-                                                    <div class="text-[10px] text-slate-500" x-text="(sub.project_title||'—') + ' · ' + (sub.topic_name||'')"></div>
+                                                    <div class="text-sm font-bold text-white"
+                                                        x-text="sub.candidateName"></div>
+                                                    <div class="text-[10px] text-slate-500"
+                                                        x-text="sub.projectTitle + ' • Day ' + sub.day"></div>
                                                 </div>
                                             </div>
-                                            <div class="text-right shrink-0">
-                                                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg"
-                                                    :class="sub.status==='graded' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'"
-                                                    x-text="sub.status"></span>
-                                                <div class="text-[9px] text-slate-600 mt-1"
-                                                    x-text="sub.submitted_at ? new Date(sub.submitted_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'"></div>
+                                            <div class="text-right">
+                                                <div class="text-[10px] font-black uppercase text-blue-400"
+                                                    x-text="sub.status"></div>
+                                                <div class="text-[9px] text-slate-600"
+                                                    x-text="new Date(sub.submittedAt).toLocaleTimeString()"></div>
                                             </div>
                                         </div>
                                     </template>
-                                    <div x-show="allSubmissions.length === 0 && !submissionsLoading"
-                                        class="text-center py-10 text-slate-600 italic text-xs">
-                                        <i class="fas fa-inbox text-3xl mb-3 block"></i>No submissions yet.
-                                    </div>
-                                </div>
-                                <div x-show="allSubmissions.length > 8" class="border-t border-slate-800 p-4 text-center">
-                                    <button @click="adminTab='submissions'; loadAllSubmissions()"
-                                        class="text-xs text-blue-400 hover:text-blue-300 font-bold transition-colors">
-                                        View all <span x-text="allSubmissions.length"></span> submissions →
-                                    </button>
+                                    <template x-if="allSubmissions.length === 0">
+                                        <div class="text-center py-10 text-slate-600 italic text-xs">No recent
+                                            submissions to display.</div>
+                                    </template>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Quick Actions -->
                         <div class="space-y-4">
-                            <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 ml-1">
-                                <i class="fas fa-bolt text-amber-500"></i> Quick Actions
+                            <h3
+                                class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 ml-1">
+                                <i class="fas fa-bolt text-amber-500"></i> Fast Track Actions
                             </h3>
                             <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl space-y-3">
                                 <button @click="loadAllSubmissions(); adminTab='submissions'; adminSubFilter='pending'"
                                     class="w-full bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between">
-                                    <span>Review Pending
-                                        <span x-show="allSubmissions.filter(s=>s.status==='pending').length > 0"
-                                            class="ml-1 bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black"
-                                            x-text="allSubmissions.filter(s=>s.status==='pending').length"></span>
-                                    </span>
-                                    <i class="fas fa-chevron-right text-[10px]"></i>
+                                    Grade Pending Submissions <i class="fas fa-chevron-right text-[10px]"></i>
                                 </button>
-                                <button @click="downloadAllReports()" :disabled="!allSubmissions.length"
-                                    class="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between disabled:opacity-40">
-                                    Export All (.xlsx) <i class="fas fa-file-excel text-[10px]"></i>
+                                <button @click="adminTab='analytics'"
+                                    class="w-full bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between">
+                                    Generate Batch Reports <i class="fas fa-chevron-right text-[10px]"></i>
                                 </button>
-                                <button @click="sendWeeklyReport()" :disabled="weeklyReportSending"
-                                    class="w-full bg-violet-600/10 hover:bg-violet-600/20 text-violet-400 border border-violet-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between disabled:opacity-50">
-                                    <span x-text="weeklyReportSending ? 'Sending...' : 'Send Weekly Report'"></span>
-                                    <i class="fas" :class="weeklyReportSending ? 'fa-circle-notch fa-spin' : 'fa-envelope'"></i>
+                                <button @click="alert('Weekly automation is active.')"
+                                    class="w-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between">
+                                    Weekly Review Status <i class="fas fa-check-circle text-[10px]"></i>
                                 </button>
-                                <button @click="loadAllSubmissions()"
-                                    class="w-full bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between">
-                                    Refresh Data <i class="fas fa-sync-alt text-[10px]"></i>
-                                </button>
-                                <button @click="runDbDiagnostics()"
-                                    :disabled="dbDiagLoading"
-                                    class="w-full bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 p-4 rounded-2xl text-xs font-bold transition-all flex items-center justify-between disabled:opacity-50">
-                                    <span x-text="dbDiagLoading ? 'Checking DB...' : 'Check DB Health'"></span>
-                                    <i class="fas" :class="dbDiagLoading ? 'fa-circle-notch fa-spin' : 'fa-database'"></i>
-                                </button>
-                                <p class="text-[10px] text-slate-600 px-1 pt-1">
-                                    <i class="fas fa-calendar-check mr-1 text-violet-500"></i>
-                                    Auto-report every <span class="text-slate-500 font-bold">Friday 6 PM IST</span>
-                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tab: Submissions -->
+                <!-- Tab: Submissions Review Hub -->
                 <div x-show="adminTab === 'submissions'" x-transition>
                     <div x-show="!gradingSubmission" class="space-y-8">
-                        <div class="flex justify-between items-end flex-wrap gap-4">
+                        <div class="flex justify-between items-end">
                             <div>
-                                <h2 class="text-3xl font-black text-white tracking-tighter">Candidate <span class="text-emerald-500">Submissions</span></h2>
-                                <p class="text-xs text-slate-500 mt-1">
-                                    <span x-text="allSubmissions.length"></span> total ·
-                                    <span class="text-amber-400" x-text="allSubmissions.filter(s=>s.status==='pending').length"></span> pending ·
-                                    <span class="text-emerald-400" x-text="allSubmissions.filter(s=>s.status==='graded').length"></span> graded
-                                </p>
+                                <h2 class="text-3xl font-black text-white tracking-tighter">Candidate <span
+                                        class="text-emerald-500">Reports</span></h2>
+                                <p class="text-xs text-slate-500 mt-1">Detailed problem-wise reports with code, test results & violation logs.</p>
                             </div>
-                            <div class="flex items-center gap-3 flex-wrap">
-                                <button @click="downloadAllReports()" :disabled="!allSubmissions.length"
-                                    class="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white px-4 py-2.5 rounded-xl text-xs border border-emerald-600 transition-all font-black flex items-center gap-2">
+                            <div class="flex items-center gap-3">
+                                <!-- Download All Reports -->
+                                <button @click="downloadAllReports()"
+                                    class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs border border-emerald-600 transition-all font-black flex items-center gap-2">
                                     <i class="fas fa-file-excel"></i> Export All (.xlsx)
                                 </button>
+                                <!-- Enhanced Search -->
                                 <div class="relative">
                                     <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                                    <input type="text" x-model="adminSearch" placeholder="Search name or email..."
-                                        class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 w-56 transition-all">
+                                    <input type="text" x-model="adminSearch" placeholder="Search candidate..."
+                                        class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 w-64 transition-all">
                                 </div>
+                                <select x-model="adminDayFilter" @change="loadAllSubmissions()"
+                                    class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Days</option>
+                                    <option value="1">Day 1</option>
+                                    <option value="2">Day 2</option>
+                                    <option value="3">Day 3</option>
+                                    <option value="4">Day 4</option>
+                                    <option value="5">Day 5</option>
+                                </select>
                                 <select x-model="adminSubFilter" @change="loadAllSubmissions()"
                                     class="bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
                                     <option value="all">All Status</option>
                                     <option value="pending">Pending</option>
                                     <option value="graded">Graded</option>
                                 </select>
-                                <button @click="loadAllSubmissions()" :disabled="submissionsLoading"
-                                    class="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 px-3.5 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">
-                                    <i class="fas" :class="submissionsLoading ? 'fa-circle-notch fa-spin' : 'fa-sync-alt'"></i>
+                                <button @click="loadAllSubmissions()"
+                                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">
+                                    <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Loading -->
-                        <div x-show="submissionsLoading" class="flex items-center justify-center py-20">
-                            <i class="fas fa-circle-notch fa-spin text-blue-400 text-3xl mr-4"></i>
-                            <span class="text-slate-400">Loading submissions...</span>
-                        </div>
-
-                        <!-- Error -->
-                        <div x-show="submissionsError && !submissionsLoading"
-                            class="bg-red-900/20 border border-red-700/40 rounded-2xl p-6 flex items-center justify-between">
-                            <div class="flex items-center gap-3 text-red-400">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span class="text-sm" x-text="submissionsError"></span>
-                            </div>
-                            <button @click="loadAllSubmissions()"
-                                class="text-xs text-red-400 hover:text-red-300 font-bold border border-red-700/40 px-3 py-1.5 rounded-lg">
-                                <i class="fas fa-redo mr-1"></i> Retry
-                            </button>
-                        </div>
-
-                        <!-- Empty -->
-                        <div x-show="!submissionsLoading && !submissionsError && filteredSubmissions.length === 0"
+                        <div x-show="allSubmissions.filter(s => !adminSearch || s.candidateName.toLowerCase().includes(adminSearch.toLowerCase()) || s.email.toLowerCase().includes(adminSearch.toLowerCase())).length === 0"
                             class="text-center py-20 text-slate-600 bg-slate-900 border border-slate-800 rounded-3xl">
-                            <i class="fas fa-inbox text-5xl mb-4 block"></i>
-                            <p class="text-lg font-bold">No submissions found</p>
+                            <i class="fas fa-clipboard-list text-5xl mb-4"></i>
+                            <p class="text-lg font-bold">No matching submissions</p>
                             <p class="text-xs text-slate-700 mt-2">Try adjusting your filters or search query.</p>
                         </div>
 
-                        <!-- Table -->
-                        <div x-show="!submissionsLoading && !submissionsError && filteredSubmissions.length > 0"
+                        <div x-show="allSubmissions.length > 0"
                             class="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
                             <table class="w-full text-left">
                                 <thead>
                                     <tr class="bg-slate-800/50">
-                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase">Candidate</th>
-                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase">Problem</th>
-                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Score</th>
-                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Violations</th>
-                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Status</th>
-                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">Submitted</th>
-                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-right">Action</th>
+                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase">
+                                            Candidate</th>
+                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase">
+                                            Problem Statement Name</th>
+                                        <th class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase">
+                                            Trainer Feedback</th>
+                                        <th
+                                            class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">
+                                            Grading</th>
+                                        <th
+                                            class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-center">
+                                            Status</th>
+                                        <th
+                                            class="px-5 py-4 text-[10px] font-black text-slate-500 uppercase text-right">
+                                            Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <template x-for="sub in filteredSubmissions" :key="sub.id">
-                                        <tr class="border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                                    <template
+                                        x-for="sub in allSubmissions.filter(s => !adminSearch || s.candidateName.toLowerCase().includes(adminSearch.toLowerCase()) || s.email.toLowerCase().includes(adminSearch.toLowerCase()))"
+                                        :key="sub.id">
+                                        <tr
+                                            class="border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors">
                                             <td class="px-5 py-4">
-                                                <div class="text-sm font-bold text-white" x-text="sub.candidate_name || '—'"></div>
+                                                <div class="text-sm font-bold text-white" x-text="sub.candidateName">
+                                                </div>
                                                 <div class="text-[10px] text-slate-500" x-text="sub.email"></div>
                                             </td>
                                             <td class="px-5 py-4">
-                                                <div class="text-xs font-bold text-slate-300" x-text="sub.project_title || '—'"></div>
-                                                <div class="text-[10px] text-slate-600" x-text="sub.topic_name || ''"></div>
+                                                <div class="text-xs font-bold text-slate-300" x-text="sub.projectTitle">
+                                                </div>
+                                                <div class="text-[10px] text-slate-500"
+                                                    x-text="'Day ' + sub.day + ' • ' + sub.topicName"></div>
+                                            </td>
+                                            <td class="px-5 py-4 text-xs text-slate-400 italic">
+                                                <div class="max-w-[200px] truncate" :title="sub.grade?.comments"
+                                                    x-text="sub.grade ? sub.grade.comments : 'Not yet graded'"></div>
                                             </td>
                                             <td class="px-5 py-4 text-center">
-                                                <span class="text-sm font-black"
-                                                    :class="(sub.auto_score||0)>=70 ? 'text-emerald-400' : 'text-amber-400'"
-                                                    x-text="(sub.auto_score||0) + '%'"></span>
-                                                <div class="text-[9px] text-slate-600"
-                                                    x-text="(sub.tests_passed||0) + '/' + (sub.tests_total||0) + ' tests'"></div>
+                                                <div class="text-sm font-black"
+                                                    :class="sub.grade ? 'text-emerald-400' : 'text-slate-600'"
+                                                    x-text="sub.grade ? sub.grade.compositeScore + '%' : '—'"></div>
+                                                <div class="text-[9px] text-slate-500"
+                                                    x-text="'Auto: ' + sub.autoScore + '%'"></div>
                                             </td>
                                             <td class="px-5 py-4 text-center">
-                                                <span class="text-sm font-black"
-                                                    :class="(sub.violation_count||0)>5 ? 'text-red-400' : (sub.violation_count||0)>0 ? 'text-amber-400' : 'text-slate-500'"
-                                                    x-text="sub.violation_count||0"></span>
-                                            </td>
-                                            <td class="px-5 py-4 text-center">
-                                                <span class="text-[10px] font-black uppercase px-3 py-1 rounded-full"
-                                                    :class="sub.status==='graded' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'"
+                                                <span class="text-[8px] font-black uppercase px-2 py-1 rounded-md"
+                                                    :class="sub.status === 'graded' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'"
                                                     x-text="sub.status"></span>
-                                            </td>
-                                            <td class="px-5 py-4 text-center text-[10px] text-slate-500"
-                                                x-text="sub.submitted_at ? new Date(sub.submitted_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'">
                                             </td>
                                             <td class="px-5 py-4 text-right">
                                                 <button @click="openGrading(sub)"
-                                                    class="bg-blue-600/10 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 px-4 py-2 rounded-xl text-[10px] font-black transition-all">
-                                                    <i class="fas fa-eye mr-1"></i> View Report
+                                                    class="text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all bg-blue-700 hover:bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-900/20">
+                                                    <i class="fas fa-file-alt mr-1"></i>
+                                                    View Report
                                                 </button>
                                             </td>
                                         </tr>
@@ -1369,116 +1339,363 @@
                                 </tbody>
                             </table>
                         </div>
-
-
-
-    </div>
-    </div>
-
-    <!-- DB Diagnostics Modal -->
-    <div x-show="showDbDiag" x-cloak x-transition
-        class="fixed inset-0 z-[400] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-6">
-        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-2xl w-full shadow-2xl max-h-[80vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-black text-white flex items-center gap-2">
-                    <i class="fas fa-database text-blue-400"></i> Database Health Check
-                </h2>
-                <button @click="showDbDiag = false" class="text-slate-500 hover:text-white transition-colors">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div x-show="dbDiagResult" class="space-y-4">
-                <!-- Summary -->
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-slate-800 rounded-2xl p-4 text-center">
-                        <div class="text-2xl font-black text-white" x-text="dbDiagResult?.submissions?.total || 0"></div>
-                        <div class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Total Submissions</div>
                     </div>
-                    <div class="bg-slate-800 rounded-2xl p-4 text-center">
-                        <div class="text-2xl font-black text-white" x-text="dbDiagResult?.candidates || 0"></div>
-                        <div class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Candidates</div>
-                    </div>
-                    <div class="bg-slate-800 rounded-2xl p-4 text-center">
-                        <div class="text-2xl font-black text-white" x-text="dbDiagResult?.solvedProblems || 0"></div>
-                        <div class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Problems Solved</div>
-                    </div>
-                </div>
-                <!-- Status breakdown -->
-                <div class="bg-slate-800 rounded-2xl p-4">
-                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">By Status</div>
-                    <template x-for="s in (dbDiagResult?.submissions?.byStatus || [])" :key="s.status">
-                        <div class="flex justify-between items-center py-1">
-                            <span class="text-xs font-bold capitalize"
-                                :class="s.status==='graded' ? 'text-emerald-400' : 'text-amber-400'"
-                                x-text="s.status"></span>
-                            <span class="text-xs font-black text-white" x-text="s.count"></span>
-                        </div>
-                    </template>
-                </div>
-                <!-- Recent 20 submissions -->
-                <div class="bg-slate-800 rounded-2xl p-4">
-                    <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Last 20 Submissions in DB</div>
-                    <div class="space-y-2 max-h-64 overflow-y-auto">
-                        <template x-for="r in (dbDiagResult?.submissions?.recent || [])" :key="r.id">
-                            <div class="flex items-center justify-between text-[10px] py-1.5 border-b border-slate-700/50">
-                                <div>
-                                    <span class="font-bold text-white" x-text="r.candidate_name || '—'"></span>
-                                    <span class="text-slate-500 ml-2" x-text="r.email"></span>
-                                </div>
-                                <div class="text-right shrink-0 ml-4">
-                                    <div class="text-slate-400" x-text="r.project_title || '—'"></div>
-                                    <div class="text-slate-600" x-text="r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-IN') : '—'"></div>
-                                </div>
-                                <span class="ml-3 text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0"
-                                    :class="r.status==='graded' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'"
-                                    x-text="r.status"></span>
+
+                    <!-- Grading View (Integrated) -->
+                    <div x-show="gradingSubmission" x-transition class="space-y-6">
+                        <div class="flex items-center gap-4">
+                            <button @click="gradingSubmission = null; gradingDetail = null"
+                                class="w-10 h-10 bg-slate-900 border border-slate-800 text-slate-500 hover:text-white rounded-xl flex items-center justify-center transition-all">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <div class="flex-1">
+                                <h3 class="text-xl font-black text-white tracking-tight">Report: <span
+                                        class="text-blue-500" x-text="gradingSubmission?.candidateName"></span></h3>
+                                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold"
+                                    x-text="gradingSubmission?.projectTitle"></p>
                             </div>
-                        </template>
-                        <div x-show="!dbDiagResult?.submissions?.recent?.length"
-                            class="text-center text-slate-600 py-4 italic">No submissions found in database</div>
+                            <button @click="downloadCandidateReport({ name: gradingSubmission.candidateName, email: gradingSubmission.email })"
+                                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs transition-all flex items-center gap-2">
+                                <i class="fas fa-file-excel"></i> Download Excel Report
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Code Viewer -->
+                            <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl h-[700px] flex flex-col">
+                                <div class="px-6 py-4 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
+                                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <i class="fas fa-terminal text-blue-400"></i> Submitted Source Code
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                                        <div class="w-3 h-3 rounded-full bg-amber-500/50"></div>
+                                        <div class="w-3 h-3 rounded-full bg-emerald-500/50"></div>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-hidden flex flex-col">
+                                    <template x-if="gradingDetail">
+                                        <div class="flex-1 flex flex-col overflow-hidden">
+                                            <template x-for="file in gradingDetail.code" :key="file.name">
+                                                <div class="flex-1 flex flex-col overflow-hidden">
+                                                    <div class="px-6 py-2 bg-slate-950/80 text-[10px] font-bold text-blue-400 flex items-center gap-2 border-b border-slate-800">
+                                                        <i class="fas fa-file-code"></i> <span x-text="file.name"></span>
+                                                    </div>
+                                                    <pre class="flex-1 p-6 text-xs code-font text-slate-300 overflow-auto bg-slate-950 custom-scrollbar leading-relaxed" x-text="file.content"></pre>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div x-show="!gradingDetail" class="flex-1 flex items-center justify-center text-slate-600 bg-slate-950">
+                                        <div class="text-center">
+                                            <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-500/50"></i>
+                                            <p class="text-xs font-bold uppercase tracking-widest">Loading Code...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Report Panel -->
+                            <div class="space-y-4">
+                                <!-- Score & Test Results -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4 class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                                        <i class="fas fa-chart-bar"></i> Score & Test Results
+                                    </h4>
+                                    <div class="grid grid-cols-3 gap-4 mb-6">
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Auto Score</div>
+                                            <div class="text-3xl font-black text-blue-400" x-text="(gradingSubmission?.autoScore || 0) + '%'"></div>
+                                        </div>
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Tests</div>
+                                            <div class="text-3xl font-black text-emerald-400" x-text="(gradingSubmission?.testsPassed || 0) + '/' + (gradingSubmission?.testsTotal || 0)"></div>
+                                        </div>
+                                        <div class="bg-slate-950 p-4 rounded-2xl text-center">
+                                            <div class="text-[10px] text-slate-500 uppercase font-bold mb-1">Violations</div>
+                                            <div class="text-3xl font-black" :class="(gradingSubmission?.violationCount || 0) > 0 ? 'text-red-400' : 'text-slate-500'" x-text="gradingSubmission?.violationCount || 0"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Test case pass/fail breakdown -->
+                                    <div class="space-y-2">
+                                        <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Test Case Breakdown</div>
+                                        <template x-if="gradingDetail && gradingDetail.testResults">
+                                            <div class="space-y-2">
+                                                <template x-for="(t, i) in (typeof gradingDetail.testResults === 'string' ? JSON.parse(gradingDetail.testResults || '[]') : (gradingDetail.testResults || []))" :key="i">
+                                                    <div class="flex items-center justify-between bg-slate-950 px-4 py-2.5 rounded-xl">
+                                                        <div class="flex items-center gap-2">
+                                                            <i class="fas text-xs" :class="t.passed ? 'fa-check-circle text-emerald-400' : 'fa-times-circle text-red-400'"></i>
+                                                            <span class="text-xs text-slate-300 font-bold" x-text="t.name || ('Test ' + (i+1))"></span>
+                                                        </div>
+                                                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg"
+                                                            :class="t.passed ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'"
+                                                            x-text="t.passed ? 'PASS' : 'FAIL'"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <div x-show="!gradingDetail" class="text-center py-4 text-slate-600 text-xs italic">Loading test results...</div>
+                                    </div>
+                                </div>
+
+                                <!-- Violation Log -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4 class="text-xs font-black text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i class="fas fa-shield-alt"></i> Violation Log
+                                    </h4>
+                                    <template x-if="gradingSubmission && gradingSubmission.violationCount > 0">
+                                        <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                            <template x-for="(v, i) in (typeof gradingSubmission.violationLog === 'string' ? JSON.parse(gradingSubmission.violationLog || '[]') : (gradingSubmission.violationLog || []))" :key="i">
+                                                <div class="flex items-start gap-2 bg-red-950/20 border border-red-900/30 px-3 py-2 rounded-xl">
+                                                    <i class="fas fa-exclamation-triangle text-red-400 text-[10px] mt-0.5"></i>
+                                                    <div>
+                                                        <div class="text-[10px] text-red-300 font-bold" x-text="v.reason"></div>
+                                                        <div class="text-[9px] text-slate-600" x-text="v.time + (v.problem ? ' — ' + v.problem : '')"></div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div x-show="!gradingSubmission || !gradingSubmission.violationCount" class="text-center py-4 text-slate-600 text-xs italic">
+                                        <i class="fas fa-check-circle text-emerald-500 mr-2"></i> No violations recorded
+                                    </div>
+                                </div>
+
+                                <!-- Submission Info -->
+                                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-2xl">
+                                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <i class="fas fa-info-circle"></i> Submission Info
+                                    </h4>
+                                    <div class="space-y-2 text-xs">
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Candidate</span>
+                                            <span class="text-white font-bold" x-text="gradingSubmission?.candidateName"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Email</span>
+                                            <span class="text-blue-400" x-text="gradingSubmission?.email"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Problem</span>
+                                            <span class="text-slate-300" x-text="gradingSubmission?.projectTitle"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-slate-800">
+                                            <span class="text-slate-500 font-bold">Submitted</span>
+                                            <span class="text-slate-300" x-text="gradingSubmission?.submittedAt ? new Date(gradingSubmission.submittedAt).toLocaleString() : '—'"></span>
+                                        </div>
+                                        <div class="flex justify-between py-1">
+                                            <span class="text-slate-500 font-bold">Status</span>
+                                            <span class="font-black uppercase text-[10px] px-2 py-0.5 rounded-lg"
+                                                :class="gradingSubmission?.status === 'graded' ? 'bg-emerald-900/40 text-emerald-400' : 'bg-amber-900/40 text-amber-400'"
+                                                x-text="gradingSubmission?.status"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Code Viewer -->
+                            <div
+                                class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl h-[700px] flex flex-col">
+                                <div
+                                    class="px-6 py-4 bg-slate-800/50 flex justify-between items-center border-b border-slate-800">
+                                    <div
+                                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <i class="fas fa-terminal text-blue-400"></i> Source Code Artifacts
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                                        <div class="w-3 h-3 rounded-full bg-amber-500/50"></div>
+                                        <div class="w-3 h-3 rounded-full bg-emerald-500/50"></div>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-hidden flex flex-col">
+                                    <template x-if="gradingDetail">
+                                        <div class="flex-1 flex flex-col overflow-hidden">
+                                            <template x-for="file in gradingDetail.code" :key="file.name">
+                                                <div class="flex-1 flex flex-col overflow-hidden">
+                                                    <div
+                                                        class="px-6 py-2 bg-slate-950/80 text-[10px] font-bold text-blue-400 flex items-center gap-2 border-b border-slate-800">
+                                                        <i class="fas fa-file-code"></i> <span
+                                                            x-text="file.name"></span>
+                                                    </div>
+                                                    <pre class="flex-1 p-6 text-xs code-font text-slate-300 overflow-auto bg-slate-950 custom-scrollbar leading-relaxed"
+                                                        x-text="file.content"></pre>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <div x-show="!gradingDetail"
+                                        class="flex-1 flex items-center justify-center text-slate-600 bg-slate-950">
+                                        <div class="text-center">
+                                            <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-500/50"></i>
+                                            <p class="text-xs font-bold uppercase tracking-widest">Hydrating Source...
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grading Controls -->
                     </div>
                 </div>
-                <div class="text-[10px] text-slate-600 text-center">DB Path: <span x-text="dbDiagResult?.dbPath"></span></div>
-            </div>
-            <div class="mt-4 flex gap-3">
-                <button @click="loadAllSubmissions(); showDbDiag = false"
-                    class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold text-xs transition-all">
-                    <i class="fas fa-sync-alt mr-2"></i> Load into Dashboard
-                </button>
-                <button @click="showDbDiag = false"
-                    class="bg-slate-800 hover:bg-slate-700 text-slate-400 px-6 py-3 rounded-xl font-bold text-xs transition-all">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Off-Day Submission Warning Modal -->
-    <div x-show="showOffDayWarning" x-cloak x-transition
-        class="fixed inset-0 z-[350] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
-        <div class="bg-slate-900 border border-amber-600/40 rounded-3xl p-10 max-w-md w-full text-center shadow-2xl shadow-amber-900/20">
-            <div class="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
-                <i class="fas fa-calendar-times text-3xl text-amber-400"></i>
-            </div>
-            <h2 class="text-xl font-black text-white mb-2">Off-Schedule Submission</h2>
-            <p class="text-sm text-slate-400 mb-2">
-                Assignments are scheduled for <span class="text-amber-400 font-bold">Monday, Wednesday & Friday</span> only.
-            </p>
-            <p class="text-xs text-slate-500 mb-8">
-                Today is <span class="font-bold text-white" x-text="new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })"></span>.
-                Your submission will be marked as <span class="text-amber-400 font-bold">off-schedule</span> in the report.
-            </p>
-            <div class="flex gap-3">
-                <button @click="showOffDayWarning = false"
-                    class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3 rounded-xl font-bold text-sm transition-all">
-                    <i class="fas fa-times mr-2"></i> Cancel
-                </button>
-                <button @click="showOffDayWarning = false; showSubmitModal = true"
-                    class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3 rounded-xl font-black text-sm transition-all">
-                    <i class="fas fa-paper-plane mr-2"></i> Submit Anyway
-                </button>
+                <!-- Tab: Analytics Hub (Legacy Data) -->
+                <div x-show="adminTab === 'analytics'" x-transition class="space-y-8">
+                    <div>
+                        <h2 class="text-3xl font-black text-white tracking-tighter">Candidate <span
+                                class="text-indigo-500">Analytics</span></h2>
+                        <p class="text-xs text-slate-500 mt-1">Holistic performance tracking and behavioral insights.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-800/50">
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Profile</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">
+                                        Completed</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">Progress</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-center">
+                                        Time</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase text-right">
+                                        Report</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="c in candidates" :key="c.code">
+                            <tbody class="group border-t border-slate-800/50">
+                                <tr class="hover:bg-slate-800/30 transition-colors">
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-bold text-white" x-text="c.name"></div>
+                                        <div class="text-[10px] text-slate-500" x-text="c.email"></div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center font-bold text-slate-300"
+                                        x-text="c.completed + ' / 40'"></td>
+                                    <td class="px-6 py-4 w-48">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                <div class="bg-indigo-500 h-full transition-all"
+                                                    :style="'width: ' + c.progress + '%'"></div>
+                                            </div>
+                                            <span class="text-[10px] font-bold text-slate-500"
+                                                x-text="c.progress + '%'"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center font-bold text-blue-400" x-text="c.hours + 'h'">
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button @click="c.showDetails = !c.showDetails"
+                                            class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl border border-slate-700 transition-all text-[10px] font-black uppercase tracking-widest">
+                                            Insights
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr x-show="c.showDetails" x-transition class="bg-slate-950/50">
+                                    <td colspan="5" class="px-10 py-8">
+                                        <div class="grid grid-cols-2 gap-16">
+                                            <div class="space-y-4">
+                                                <h5
+                                                    class="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                    Strengths & Topics Mastery</h5>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <template x-for="st in c.strong" :key="st">
+                                                        <div
+                                                            class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 px-4 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-2">
+                                                            <i class="fas fa-check-circle text-[8px]"></i> <span
+                                                                x-text="st"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-4">
+                                                <h5
+                                                    class="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                    Growth Recommendations</h5>
+                                                <p class="text-xs text-slate-400 italic leading-relaxed">"Candidate
+                                                    shows strong aptitude in <span class="text-blue-400 font-bold"
+                                                        x-text="c.strong[0]"></span>. Suggested roadmap: Advanced
+                                                    AUTOSAR modules."</p>
+                                                <button
+                                                    class="text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest flex items-center gap-2 mt-4">
+                                                    <i class="fas fa-file-pdf"></i> Generate Evaluation Dossier
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
+
+    <!-- Tab: Course Visibility Controls -->
+                <div x-show="adminTab === 'courses'" x-transition class="space-y-8">
+                    <div>
+                        <h2 class="text-3xl font-black text-white tracking-tighter">Course <span class="text-violet-500">Visibility</span></h2>
+                        <p class="text-xs text-slate-500 mt-1">Enable or disable courses for all participants on the platform.</p>
+                    </div>
+
+                    <!-- Loading state -->
+                    <div x-show="topicLoadError" class="bg-red-900/30 border border-red-700/40 rounded-2xl p-6 text-red-400 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> Failed to load topics. Make sure the server is running and try again.
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+                        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                            <div class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fas fa-toggle-on text-violet-500"></i> Available Courses
+                            </div>
+                            <div class="text-[10px] text-slate-600" x-text="Object.keys(topicVisibility).length + ' courses total'"></div>
+                        </div>
+                        <div class="divide-y divide-slate-800">
+                            <template x-for="[name, enabled] in Object.entries(topicVisibility)" :key="name">
+                                <div class="flex items-center justify-between px-6 py-4 hover:bg-slate-800/40 transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                            :class="enabled ? 'bg-violet-600/20 text-violet-400' : 'bg-slate-800 text-slate-600'">
+                                            <i class="fas" :class="enabled ? 'fa-book-open' : 'fa-book'"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-white" x-text="name"></div>
+                                            <div class="text-[10px] mt-0.5" :class="enabled ? 'text-emerald-400' : 'text-slate-600'"
+                                                x-text="enabled ? 'Visible to participants' : 'Hidden from participants'"></div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        @click="toggleTopic(name, !enabled)"
+                                        :disabled="topicSaving === name"
+                                        class="relative inline-flex items-center w-12 h-6 rounded-full transition-all duration-300 focus:outline-none disabled:opacity-50"
+                                        :class="enabled ? 'bg-violet-600' : 'bg-slate-700'">
+                                        <span class="inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300"
+                                            :class="enabled ? 'translate-x-6' : 'translate-x-1'"></span>
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="Object.keys(topicVisibility).length === 0">
+                                <div class="text-center py-10 text-slate-600 italic text-xs">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading courses...
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Save status toast (inline) -->
+                    <div x-show="topicSaveMsg" x-transition
+                        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-violet-700 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span x-text="topicSaveMsg"></span>
+                    </div>
+                </div>
+
+    </div>
     </div>
 
     <!-- Submit Assignment Modal -->
@@ -1806,17 +2023,10 @@
                 rp2040LEDOn: false,
                 // Assignment Submission & Grading
                 showSubmitModal: false,
-                showOffDayWarning: false,
-                dbDiagLoading: false,
-                dbDiagResult: null,
-                showDbDiag: false,
-                weeklyReportSending: false,
                 submitDay: 1,
                 isSubmitting: false,
                 mySubmissions: [],
                 allSubmissions: [],
-                submissionsLoading: false,
-                submissionsError: '',
 
                 init() {
                     const urlParams = new URLSearchParams(window.location.search);
@@ -1909,8 +2119,6 @@
                                     }
 
                                     this._loadServerProgress();
-                                    if (data.user.role === "admin") { this.loadAllSubmissions(); this.loadCandidates(); }
-                                    if (data.user.role === "candidate") { this._restoreViolations(data.user.email); }
                                 } else {
                                     this.logout();
                                 }
@@ -1934,9 +2142,6 @@
                 isGrading: false,
                 // Anti-Cheat / Proctoring
                 violationCount: 0,
-                autoSaveStatus: '',        // '' | 'saving' | 'saved' | 'error'
-                autoSaveTimer: null,
-                _autoSaveTimer: null,
                 violationWarning: false,
                 criticalViolationWarning: false,
                 violationLog: [],
@@ -1978,7 +2183,10 @@
                 ],
 
 
-                candidates: [],
+                candidates: [
+                    { name: 'Arjun Mehra', email: 'arjun.m@eng.com', code: 'SL-A8K1P2', completed: 18, hours: 42, strong: ['Embedded C', 'ADC'], weak: ['RTOS'], progress: 75, showDetails: false },
+                    { name: 'Priya Sharma', email: 'priya.s@tech.in', code: 'SL-Q2W9L0', completed: 25, hours: 58, strong: ['CPP17', 'SPI'], weak: ['DMA'], progress: 95, showDetails: false }
+                ],
 
                 projects: [
                     // --- Linux System Programming (LINUX_SYS) ---
@@ -2732,58 +2940,23 @@
                     return token ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } : { 'Content-Type': 'application/json' };
                 },
 
-                _restoreViolations(email) {
-                    try {
-                        const stored = localStorage.getItem('vlab_violations_' + email);
-                        if (stored) {
-                            const { count, log } = JSON.parse(stored);
-                            // Only restore if more violations than current (don't overwrite a fresh session)
-                            if (count > this.violationCount) {
-                                this.violationCount = count || 0;
-                                this.violationLog = log || [];
-                            }
-                        }
-                    } catch(e) {}
-                },
-
                 async _loadServerProgress() {
                     try {
                         const r = await fetch('/api/progress', { headers: this._authHeaders() });
                         if (r.ok) {
                             const data = await r.json();
-                            const serverIds = data.solvedProjectIds || [];
-                            // Merge: union of server + localStorage so neither source loses data
-                            const localIds = JSON.parse(localStorage.getItem('solvedProjectIds') || '[]');
-                            const merged = [...new Set([...serverIds, ...localIds])];
-                            this.solvedProjectIds = merged;
-                            // Persist merged back to localStorage as source of truth
-                            localStorage.setItem('solvedProjectIds', JSON.stringify(merged));
-                            // If localStorage had IDs the server didn't — sync them up to server
-                            const missing = localIds.filter(id => !serverIds.includes(id));
-                            missing.forEach(id => {
-                                fetch('/api/progress/save', {
-                                    method: 'POST',
-                                    headers: this._authHeaders(),
-                                    body: JSON.stringify({ projectId: id, files: [], solved: true })
-                                }).catch(() => {});
-                            });
+                            this.solvedProjectIds = data.solvedProjectIds || [];
                         }
-                    } catch {
-                        // Server unreachable — fall back to localStorage
-                        const localIds = JSON.parse(localStorage.getItem('solvedProjectIds') || '[]');
-                        if (localIds.length > 0) this.solvedProjectIds = localIds;
-                    }
+                    } catch { } // Fallback to localStorage silently
                 },
 
                 _saveProgressToServer(projectId, files, solved) {
                     // Fire-and-forget: save progress in background without blocking UI
                     if (!this.isLoggedIn || !this._getToken()) return;
-                    // Never downgrade a solved problem — if it's already in solvedProjectIds keep it solved
-                    const isSolved = solved || this.solvedProjectIds.includes(projectId);
                     fetch('/api/progress/save', {
                         method: 'POST',
                         headers: this._authHeaders(),
-                        body: JSON.stringify({ projectId, files, solved: isSolved })
+                        body: JSON.stringify({ projectId, files, solved })
                     }).catch(() => { }); // Silently ignore network errors
                 },
 
@@ -2916,8 +3089,6 @@
                             // Save the active state locally so it's not lost on refresh
                             this.saveSession();
                             this._loadServerProgress();
-                            // Restore violations from localStorage (survives page close/refresh)
-                            this._restoreViolations(data.user.email);
                         }
                     } catch (e) {
                         alert('Network error. Make sure the server is running.');
@@ -2945,71 +3116,11 @@
                             this.adminTab = 'overview';
                             this.isLoggedIn = true;
                             this.saveSession();
-                            // Auto-load submissions and candidates for dashboard
-                            this.loadAllSubmissions();
-                            this.loadCandidates();
                         }
                     } catch (e) {
                         alert('Network error.');
                     } finally {
                         this.authLoading = false;
-                    }
-                },
-
-                // DB health check — works on free tier (no shell needed)
-                async runDbDiagnostics() {
-                    if (this.dbDiagLoading) return;
-                    this.dbDiagLoading = true;
-                    this.dbDiagResult = null;
-                    try {
-                        const r = await fetch('/api/admin/db-stats', { headers: this._authHeaders() });
-                        if (!r.ok) throw new Error('Server returned ' + r.status);
-                        this.dbDiagResult = await r.json();
-                        this.showDbDiag = true;
-                        // Also sync into allSubmissions if DB has more than what's loaded
-                        if (this.dbDiagResult.submissions.total > this.allSubmissions.length) {
-                            this.loadAllSubmissions();
-                        }
-                    } catch(e) {
-                        alert('DB check failed: ' + e.message + '\n\nMake sure the latest server.js is deployed on Render.');
-                    } finally {
-                        this.dbDiagLoading = false;
-                    }
-                },
-
-                // Off-day submission check — Mon(1), Wed(3), Fri(5) are allowed
-                checkOffDayThenSubmit() {
-                    const day = new Date().getDay(); // 0=Sun,1=Mon,...,6=Sat
-                    const isAllowedDay = [1, 3, 5].includes(day);
-                    if (!isAllowedDay) {
-                        this.showOffDayWarning = true;
-                    } else {
-                        this.showSubmitModal = true;
-                    }
-                },
-
-                // Manual weekly report trigger for admins
-                async sendWeeklyReport() {
-                    if (this.weeklyReportSending) return;
-                    this.weeklyReportSending = true;
-                    const weekLabel = `Week ending ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`;
-                    try {
-                        const r = await fetch('/api/admin/send-weekly-report', {
-                            method: 'POST',
-                            headers: this._authHeaders(),
-                            body: JSON.stringify({ weekLabel })
-                        });
-                        const data = await r.json();
-                        if (data.success) {
-                            this.successToast = `📧 Weekly report sent to ${data.sentTo?.join(', ')}`;
-                        } else {
-                            alert('Failed to send report: ' + (data.error || 'Unknown error'));
-                        }
-                    } catch (e) {
-                        alert('Network error sending report.');
-                    } finally {
-                        this.weeklyReportSending = false;
-                        setTimeout(() => { this.successToast = ''; }, 5000);
                     }
                 },
 
@@ -3124,17 +3235,6 @@
                     return allowed.filter(p => this.topicFilter.includes(p.topicId));
                 },
 
-                get filteredSubmissions() {
-                    const q = (this.adminSearch || '').toLowerCase().trim();
-                    return this.allSubmissions.filter(s => {
-                        if (!q) return true;
-                        const name = (s.candidate_name || '').toLowerCase();
-                        const email = (s.email || '').toLowerCase();
-                        const title = (s.project_title || '').toLowerCase();
-                        return name.includes(q) || email.includes(q) || title.includes(q);
-                    });
-                },
-
                 get solvedCount() { return this.solvedProjectIds.length; },
                 get totalProgress() { return Math.round((this.solvedCount / (this.selectedTopic?.id === 'VISTEON_C' ? 20 : (this.allowedProjects.length || this.projects.length))) * 100) || 0; },
                 get totalPointsEarned() {
@@ -3180,22 +3280,10 @@
                             cpp(),
                             oneDark,
                             EditorView.lineWrapping,
-                            EditorView.editable.of(true),
+                            EditorView.editable.of(true), // Explicitly make editable
                             EditorView.updateListener.of((update) => {
                                 if (update.docChanged && this.activeFiles[this.activeFileIdx]) {
                                     this.activeFiles[this.activeFileIdx].content = update.state.doc.toString();
-                                    // Debounced auto-save: 2s after user stops typing
-                                    clearTimeout(this._autoSaveTimer);
-                                    this._autoSaveTimer = setTimeout(() => {
-                                        if (this.isLoggedIn && this.activeProject) {
-                                            // Save to localStorage immediately
-                                            localStorage.setItem('code_' + this.activeProject.id, JSON.stringify(this.activeFiles));
-                                            // Save to server in background
-                                            const isSolved = this.solvedProjectIds.includes(this.activeProject.id);
-                                            this._saveProgressToServer(this.activeProject.id, this.activeFiles, isSolved);
-                                            this._showAutoSaveIndicator();
-                                        }
-                                    }, 2000);
                                 }
                             })
                         ],
@@ -3598,35 +3686,16 @@
                     }
                 },
 
-                async loadCandidates() {
-                    try {
-                        const r = await fetch('/api/users', { headers: this._authHeaders() });
-                        if (r.ok) {
-                            const data = await r.json();
-                            this.candidates = Array.isArray(data) ? data.filter(u => u.role === 'candidate') : [];
-                        }
-                    } catch(e) { console.error('Failed to load candidates:', e); }
-                },
-
                 async loadAllSubmissions() {
-                    this.submissionsLoading = true;
-                    this.submissionsError = '';
                     try {
                         let url = '/api/submissions?';
-                        if (this.adminSubFilter && this.adminSubFilter !== 'all') url += 'status=' + this.adminSubFilter + '&';
+                        if (this.adminDayFilter) url += 'day=' + this.adminDayFilter + '&';
+                        if (this.adminSubFilter && this.adminSubFilter !== 'all') url += 'status=' + this.adminSubFilter;
                         const response = await fetch(url, { headers: this._authHeaders() });
-                        if (!response.ok) {
-                            const err = await response.json().catch(() => ({}));
-                            throw new Error(err.error || 'Server returned ' + response.status);
-                        }
-                        const data = await response.json();
-                        this.allSubmissions = Array.isArray(data) ? data : [];
+                        this.allSubmissions = await response.json();
                     } catch (e) {
                         console.error('Failed to load submissions:', e);
-                        this.submissionsError = 'Failed to load submissions: ' + e.message + '. Click Retry to try again.';
                         this.allSubmissions = [];
-                    } finally {
-                        this.submissionsLoading = false;
                     }
                 },
 
@@ -3733,30 +3802,18 @@
                 registerViolation(reason) {
                     if (!this.isLoggedIn || this.user.role === 'admin') return;
                     this.violationCount++;
-                    const entry = {
+                    this.violationLog.push({
                         time: new Date().toLocaleTimeString(),
                         reason: reason,
                         count: this.violationCount,
                         problem: this.activeProject?.title || '—'
-                    };
-                    this.violationLog.push(entry);
-                    // Persist violations to localStorage so they survive page refresh
-                    try {
-                        localStorage.setItem('vlab_violations_' + this.user.email,
-                            JSON.stringify({ count: this.violationCount, log: this.violationLog }));
-                    } catch(e) {}
+                    });
                     if (this.violationCount >= 10) {
                         this.criticalViolationWarning = true;
                     } else {
                         this.violationWarning = true;
                         setTimeout(() => { this.violationWarning = false; }, 3000);
                     }
-                },
-
-                _showAutoSaveIndicator() {
-                    this.autoSaveStatus = 'saved';
-                    clearTimeout(this.autoSaveTimer);
-                    this.autoSaveTimer = setTimeout(() => { this.autoSaveStatus = ''; }, 3000);
                 },
 
                 // ── Problem Timer Pool ────────────────────────────────────
