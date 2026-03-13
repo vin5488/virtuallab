@@ -605,7 +605,7 @@ app.post('/api/progress/save', requireAuth, (req, res) => {
         VALUES (?, ?, ?, ?, datetime('now'))
         ON CONFLICT(email, project_id) DO UPDATE SET
           files = excluded.files,
-          solved = excluded.solved,
+          solved = MAX(progress.solved, excluded.solved),
           updated_at = excluded.updated_at
     `).run(email, projectId, JSON.stringify(files), solved ? 1 : 0);
 
@@ -707,12 +707,37 @@ app.get('/api/submissions', requireAdmin, (req, res) => {
 
     query += ' ORDER BY submitted_at DESC';
 
-    const rows = db.prepare(query).all(...params);
-    const result = rows.map(r => ({
-        ...r,
-        grade: r.grade ? JSON.parse(r.grade) : null
-    }));
-    res.json(result);
+    try {
+        const rows = db.prepare(query).all(...params);
+        const result = rows.map(r => ({
+            ...r,
+            grade: r.grade ? JSON.parse(r.grade) : null
+        }));
+        res.json(result);
+    } catch(e) {
+        console.error('[Submissions] Query error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// GET /api/admin/db-stats — DB diagnostics (admin only, free tier friendly)
+app.get('/api/admin/db-stats', requireAdmin, (req, res) => {
+    try {
+        const submissionCount = db.prepare('SELECT COUNT(*) as total FROM submissions').get();
+        const userCount = db.prepare("SELECT COUNT(*) as total FROM users WHERE role='candidate'").get();
+        const progressCount = db.prepare('SELECT COUNT(*) as total FROM progress WHERE solved=1').get();
+        const recent = db.prepare(`SELECT id, candidate_name, email, project_title, submitted_at, status
+                                   FROM submissions ORDER BY submitted_at DESC LIMIT 20`).all();
+        const byStatus = db.prepare(`SELECT status, COUNT(*) as count FROM submissions GROUP BY status`).all();
+        res.json({
+            submissions: { total: submissionCount.total, byStatus, recent },
+            candidates: userCount.total,
+            solvedProblems: progressCount.total,
+            dbPath: process.env.DB_PATH || 'default'
+        });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // GET /api/submission/:id — Full detail of one submission (admin only)
@@ -1095,8 +1120,128 @@ app.use((req, res, next) => {
 });
 
 // ══════════════════════════════════════════════════════
-// START SERVER
+// WEEKLY REPORT — Friday auto-email + manual trigger
 // ══════════════════════════════════════════════════════
+
+async function buildWeeklyReportHTML(weekLabel) {
+    const rows = db.prepare(`
+        SELECT u.name, u.email,
+               COUNT(DISTINCT CASE WHEN p.solved = 1 THEN p.project_id END) as solved_count,
+               COUNT(DISTINCT s.id) as submission_count,
+               ROUND(AVG(CASE WHEN s.auto_score IS NOT NULL THEN s.auto_score END), 1) as avg_score,
+               SUM(COALESCE(s.violation_count, 0)) as total_violations
+        FROM users u
+        LEFT JOIN progress p ON p.email = u.email
+        LEFT JOIN submissions s ON s.email = u.email
+        WHERE u.role = 'candidate'
+        GROUP BY u.email
+        ORDER BY solved_count DESC, avg_score DESC
+    `).all();
+
+    const date = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const tableRows = rows.map((r, i) => `
+        <tr style="background:${i % 2 === 0 ? '#f9fafb' : '#ffffff'}">
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151">${i + 1}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb">${r.name || '—'}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;color:#6b7280">${r.email}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700;color:#2563eb">${r.solved_count || 0} / 20</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:center">${r.submission_count || 0}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:700;color:${(r.avg_score || 0) >= 70 ? '#16a34a' : '#dc2626'}">${r.avg_score || '—'}%</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:center;color:${(r.total_violations || 0) > 5 ? '#dc2626' : '#374151'}">${r.total_violations || 0}</td>
+        </tr>`).join('');
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif">
+      <div style="max-width:800px;margin:30px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:32px 40px">
+          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px">📊 Weekly Progress Report</h1>
+          <p style="margin:6px 0 0;color:#bfdbfe;font-size:14px">${weekLabel} &nbsp;·&nbsp; Generated: ${date}</p>
+        </div>
+        <!-- Stats Bar -->
+        <div style="display:flex;background:#eff6ff;padding:20px 40px;gap:40px;border-bottom:1px solid #dbeafe">
+          <div><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Total Candidates</div><div style="font-size:28px;font-weight:800;color:#1e3a8a">${rows.length}</div></div>
+          <div><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Avg Score</div><div style="font-size:28px;font-weight:800;color:#16a34a">${rows.length ? Math.round(rows.reduce((a,r)=>a+(r.avg_score||0),0)/rows.length) : 0}%</div></div>
+          <div><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Total Submissions</div><div style="font-size:28px;font-weight:800;color:#2563eb">${rows.reduce((a,r)=>a+(r.submission_count||0),0)}</div></div>
+          <div><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Total Violations</div><div style="font-size:28px;font-weight:800;color:#dc2626">${rows.reduce((a,r)=>a+(r.total_violations||0),0)}</div></div>
+        </div>
+        <!-- Table -->
+        <div style="padding:24px 40px">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="background:#1e3a8a">
+                <th style="padding:12px 14px;color:#fff;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">#</th>
+                <th style="padding:12px 14px;color:#fff;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Name</th>
+                <th style="padding:12px 14px;color:#fff;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Email</th>
+                <th style="padding:12px 14px;color:#fff;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Solved</th>
+                <th style="padding:12px 14px;color:#fff;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Submissions</th>
+                <th style="padding:12px 14px;color:#fff;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Avg Score</th>
+                <th style="padding:12px 14px;color:#fff;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Violations</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows || '<tr><td colspan="7" style="padding:20px;text-align:center;color:#9ca3af">No candidate data yet</td></tr>'}</tbody>
+          </table>
+        </div>
+        <!-- Footer -->
+        <div style="padding:20px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center">
+          <p style="margin:0;font-size:11px;color:#9ca3af">Visteon × SkillLync VirtualLab &nbsp;·&nbsp; Auto-generated every Friday at 6:00 PM IST</p>
+        </div>
+      </div>
+    </body>
+    </html>`;
+}
+
+async function sendWeeklyReport(weekLabel, triggeredBy) {
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+    if (!adminEmails.length) {
+        console.log('[WeeklyReport] No ADMIN_EMAILS set, skipping.');
+        return { success: false, error: 'No admin emails configured' };
+    }
+    try {
+        const html = await buildWeeklyReportHTML(weekLabel);
+        await transporter.sendMail({
+            from: process.env.SMTP_FROM || '"VirtualLab" <noreply@virtuallab.io>',
+            to: adminEmails.join(','),
+            subject: `📊 VirtualLab Weekly Report — ${weekLabel}`,
+            html
+        });
+        console.log(`[WeeklyReport] Sent to ${adminEmails.join(', ')} (triggered by: ${triggeredBy || 'scheduler'})`);
+        return { success: true, sentTo: adminEmails };
+    } catch (err) {
+        console.error('[WeeklyReport] Failed:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+// ── Friday 6 PM IST scheduler (only on worker 1 to avoid duplicate emails) ──
+if (WORKER_ID === 1) {
+    setInterval(() => {
+        const now = new Date();
+        // IST = UTC + 5:30
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const ist = new Date(now.getTime() + istOffset);
+        const isFriday = ist.getUTCDay() === 5;
+        const isReportTime = ist.getUTCHours() === 18 && ist.getUTCMinutes() === 0;
+        if (isFriday && isReportTime) {
+            const weekLabel = `Week ending ${ist.toISOString().slice(0, 10)}`;
+            sendWeeklyReport(weekLabel, 'auto-scheduler');
+        }
+    }, 60 * 1000); // check every minute
+    console.log('[Worker 1] Friday weekly report scheduler active');
+}
+
+// POST /api/admin/send-weekly-report — manual trigger from admin UI
+app.post('/api/admin/send-weekly-report', requireAdmin, async (req, res) => {
+    const weekLabel = req.body.weekLabel || `Week ending ${new Date().toISOString().slice(0, 10)}`;
+    const result = await sendWeeklyReport(weekLabel, req.user?.email || 'admin');
+    res.json(result);
+});
+
+
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Worker ${WORKER_ID}] Server running on port ${PORT}`);
     console.log(`[Worker ${WORKER_ID}] Compile queue max: ${MAX_CONCURRENT_COMPILES}`);
